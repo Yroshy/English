@@ -1310,29 +1310,17 @@ if ('speechSynthesis' in window) {
   refreshVoices();
   speechSynthesis.onvoiceschanged = refreshVoices;
 }
-const MALE_VOICE_NAMES = [
-  'daniel','fred','alex','aaron','arthur','oliver','gordon','george','ryan','guy',
-  'david','mark','tom','eric','james','thomas','rishi','male','man'
-];
 function pickEnglishVoice(){
   if (!cachedVoices.length) refreshVoices();
-  // Whole-word match, not substring — "Samantha" must not match "man", nor
-  // "Alexandra" match "alex".
-  const isMale = v => {
-    const words = v.name.toLowerCase().split(/[^a-z]+/);
-    return words.some(w => MALE_VOICE_NAMES.includes(w));
-  };
-  // American English specifically — this app teaches US English, and a
-  // same-priority "any English" match can hand a British voice (e.g.
-  // "Daniel", en-GB) to a male-name check before an American one is even
-  // considered, purely because of OS enumeration order. Filtering to en-US
-  // first, and only widening if the device truly has none, rules that out.
-  // Accent correctness outranks gender when they conflict — e.g. Android's
-  // generic "Google US English" (no gender in the name) must still beat
-  // "Google UK English Male", which matches isMale but is the wrong accent.
+  // No gender preference — the male-voice match was landing on low-quality
+  // novelty voices (e.g. iOS's "Fred", robotic and hard to understand) on
+  // some devices, which is worse than the accent/gender trade-off it was
+  // meant to fix. Just prefer American English (this app teaches US
+  // English) and otherwise take whatever the OS considers its default
+  // English voice — normally a clear, natural-sounding one.
   const us = cachedVoices.filter(v => v.lang && v.lang.toLowerCase() === 'en-us');
   const english = cachedVoices.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
-  return us.find(isMale) || us[0] || english.find(isMale) || english[0] || null;
+  return us[0] || english[0] || null;
 }
 function applyVoice(utterance, rate){
   const voice = pickEnglishVoice();
