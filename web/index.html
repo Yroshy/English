@@ -491,6 +491,79 @@ const STUDY_DAYS = [
 ];
 function dayInfo(id){ return STUDY_DAYS.find(d=>d.id===id); }
 
+// ============================== PLANO 2: "5 PILARES" ==============================
+// A second, separate study mode (alongside the weekly single-text plan
+// above), modeled on Vânia Sausen's "if I were starting from zero" method:
+// learn ready-made phrases (not loose words), review by recalling PT->EN
+// (not just recognizing EN->PT), only the 4 verb tenses that unlock daily
+// communication, and listening + speaking from day one. Not tied to a CEFR
+// level or a rotating weekly text — it's a fixed set of daily practice
+// areas ("pillars") the learner revisits, switchable from Home (S.studyPlan).
+const PILLARS = [
+  {id:'phrases', title:'Frases-chave', subtitle:'Aprenda frases prontas, não palavras soltas', icon:'link'},
+  {id:'review', title:'Revisão ativa', subtitle:'Lembre do inglês a partir do português', icon:'layers'},
+  {id:'grammar', title:'Tempos verbais essenciais', subtitle:'Só os 4 que você realmente usa pra falar', icon:'bookOpen'},
+  {id:'listening', title:'Listening desde o dia 1', subtitle:'Ouça devagar, entenda, repita em voz alta', icon:'headphones'},
+  {id:'speaking', title:'Fala desde o dia 1', subtitle:'Fale sobre sua rotina, sem medo de errar', icon:'mic'},
+];
+function pillarInfo(id){ return PILLARS.find(p=>p.id===id); }
+
+const PILLAR_PHRASE_SETS = [
+  {id:'what', word:'What', meaning:'O quê / Qual', phrases:[
+    {en:"What do you do?", pt:"O que você faz?"},
+    {en:"What do you mean?", pt:"Como assim?"},
+    {en:"What happened?", pt:"O que aconteceu?"},
+    {en:"What time is it?", pt:"Que horas são?"},
+    {en:"What's your name?", pt:"Qual é o seu nome?"},
+  ]},
+  {id:'where', word:'Where', meaning:'Onde', phrases:[
+    {en:"Where are you from?", pt:"De onde você é?"},
+    {en:"Where do you live?", pt:"Onde você mora?"},
+    {en:"Where are you?", pt:"Onde você está?"},
+    {en:"Where's the bathroom?", pt:"Onde é o banheiro?"},
+  ]},
+  {id:'when', word:'When', meaning:'Quando', phrases:[
+    {en:"When's your birthday?", pt:"Quando é seu aniversário?"},
+    {en:"When did you arrive?", pt:"Quando você chegou?"},
+    {en:"When can we meet?", pt:"Quando a gente pode se encontrar?"},
+  ]},
+];
+function allPillarPhrases(){ return PILLAR_PHRASE_SETS.flatMap(set => set.phrases.map(p => ({...p, setId: set.id}))); }
+
+const PILLAR_GRAMMAR = [
+  {id:'present-simple', title:'Present Simple', why:'Fala da sua rotina, hábitos e dia a dia — o primeiro que você precisa aprender.', examples:[
+    {en:"I live in Brazil.", pt:"Eu moro no Brasil."},
+    {en:"I work as a teacher.", pt:"Eu trabalho como professora."},
+    {en:"I like coffee.", pt:"Eu gosto de café."},
+    {en:"I don't work on weekends.", pt:"Eu não trabalho nos finais de semana."},
+    {en:"Do you work from home?", pt:"Você trabalha de casa?"},
+  ]},
+  {id:'present-continuous', title:'Present Continuous', why:'Coisas acontecendo agora, ou temporárias.', examples:[
+    {en:"I'm working.", pt:"Tô trabalhando."},
+    {en:"I'm studying English.", pt:"Tô estudando inglês."},
+    {en:"I work from home.", pt:"Eu trabalho de casa. (rotina)"},
+    {en:"I am working from home.", pt:"Estou trabalhando de casa agora. (temporário)"},
+  ]},
+  {id:'past-simple', title:'Past Simple', why:'Contar o que aconteceu, seu passado, sua infância.', examples:[
+    {en:"I traveled to São Paulo last year.", pt:"Viajei para São Paulo ano passado."},
+    {en:"I went to church yesterday.", pt:"Fui à igreja ontem."},
+    {en:"I met my friends.", pt:"Encontrei meus amigos."},
+    {en:"What did you do yesterday?", pt:"O que você fez ontem?"},
+  ]},
+  {id:'future', title:'Futuro (will / going to)', why:'Falar de planos e do futuro.', examples:[
+    {en:"I'm going to travel next month.", pt:"Vou viajar no próximo mês."},
+    {en:"I'll call you later.", pt:"Te ligo mais tarde."},
+  ]},
+];
+
+const PILLAR_SPEAKING_PROMPTS = [
+  "Fale seu nome e de onde você é: \"My name is ___. I'm from ___.\"",
+  "Fale sobre o que você gosta e o que não gosta: \"I like ___. I don't like ___.\"",
+  "Fale sobre sua rotina usando o Present Simple: onde mora, onde trabalha, o que faz no dia a dia.",
+  "Conte algo que você fez ontem ou na semana passada, usando o Past Simple.",
+  "Fale um plano seu pra próxima semana ou mês, usando \"going to\" ou \"will\".",
+];
+
 // One hand-written, richly-detailed everyday routine text per CEFR level —
 // ported 1:1 from the native app's offline seed bank, so both versions teach
 // the same content.
@@ -1033,6 +1106,13 @@ function defaultState(){
     level:null, baseLevel:null, hasOnboarded:false, xpTotal:0, currentStreak:0, longestStreak:0,
     lastActiveDate:null, currentWeek:null, completedWeeks:[], reviewCards:[], apiKey:null,
     totalListenSeconds:0, dailyStats:null, speechRate:1,
+    // Plano 2 ("5 Pilares", Vânia Sausen): a separate, non-weekly study mode
+    // the learner can switch to from Home (see S.studyPlan). pillarStats is
+    // today's per-pillar completion (like dailyStats, resets daily);
+    // pillarTotals is what persists across days (which phrase sets/grammar
+    // items have ever been marked practiced).
+    studyPlan:'weekly', pillarStats:null,
+    pillarTotals:{ phrasesDone:[], grammarDone:[], listeningDone:[], reviewSessions:0 },
   };
 }
 let S = loadState();
@@ -1110,6 +1190,25 @@ function evaluateStreakDecay(){
   if(d>1){ S.currentStreak = 0; save(); }
 }
 
+/* ---- Plano 2 ("5 Pilares") daily completion, mirrors ensureTodayStats ---- */
+function ensurePillarStats(){
+  const today = todayStr();
+  if(!S.pillarStats || S.pillarStats.date !== today){
+    S.pillarStats = { date:today, done:{phrases:false, review:false, grammar:false, listening:false, speaking:false} };
+  }
+}
+function pillarDoneToday(id){ ensurePillarStats(); return S.pillarStats.done[id]; }
+function pillarsCompletedTodayCount(){ ensurePillarStats(); return Object.values(S.pillarStats.done).filter(Boolean).length; }
+function completePillarToday(id){
+  ensurePillarStats();
+  if(!S.pillarStats.done[id]){
+    S.pillarStats.done[id] = true;
+    S.xpTotal += 10;
+    registerActivityToday();
+  }
+  save();
+}
+
 function weekIsComplete(week){ return week && week.completedDays.length===STUDY_DAYS.length; }
 function weekProgress(week){ return week ? week.completedDays.length/STUDY_DAYS.length : 0; }
 
@@ -1169,7 +1268,7 @@ function gradeReviewCard(id, grade){
 }
 
 /* ============================== APP / ROUTER STATE ============================== */
-const V = { tab:'home', pushedDay:null, modal:null, reviewCardsSession:null, reviewIndex:0, reviewRevealed:false };
+const V = { tab:'home', pushedDay:null, pushedPillar:null, modal:null, reviewCardsSession:null, reviewIndex:0, reviewRevealed:false };
 
 const root = document.getElementById('app');
 function render(){
@@ -1247,13 +1346,18 @@ function viewShell(){
 function bindShell(){
   document.querySelector('[data-action="open-level"]').addEventListener('click', ()=>{ V.modal='levelChange'; render(); });
   document.querySelector('[data-action="open-settings"]').addEventListener('click', ()=>{ V.modal='settings'; render(); });
-  document.querySelector('[data-action="tab-home"]').addEventListener('click', ()=>{ V.tab='home'; V.pushedDay=null; render(); });
-  document.querySelector('[data-action="tab-review"]').addEventListener('click', ()=>{ V.tab='review'; V.pushedDay=null; render(); });
+  document.querySelector('[data-action="tab-home"]').addEventListener('click', ()=>{ V.tab='home'; V.pushedDay=null; V.pushedPillar=null; render(); });
+  document.querySelector('[data-action="tab-review"]').addEventListener('click', ()=>{ V.tab='review'; V.pushedDay=null; V.pushedPillar=null; render(); });
 
   const content = document.getElementById('tab-content');
   if(V.tab==='home'){
-    if(V.pushedDay){ content.innerHTML = viewDay(V.pushedDay); bindDay(V.pushedDay); }
-    else { content.innerHTML = viewHome(); bindHome(); }
+    if(S.studyPlan==='pillars'){
+      if(V.pushedPillar){ content.innerHTML = viewPillarScreen(V.pushedPillar); bindPillarScreen(V.pushedPillar); }
+      else { content.innerHTML = viewPillarsHome(); bindPillarsHome(); }
+    } else {
+      if(V.pushedDay){ content.innerHTML = viewDay(V.pushedDay); bindDay(V.pushedDay); }
+      else { content.innerHTML = viewHome(); bindHome(); }
+    }
   } else {
     content.innerHTML = viewReview();
     bindReview();
@@ -1490,7 +1594,9 @@ function viewHome(){
         <button class="btn primary" data-action="new-week" style="margin-top:6px">${icon('zap')} Gerar texto da semana</button>
       </div>`;
   }
-  return `<div class="pad">${statRowHtml()}${goalCardHtml()}${body}</div>`;
+  return `<div class="pad">${statRowHtml()}${goalCardHtml()}${body}
+    <button class="link-btn" data-action="switch-plan" data-plan="pillars" style="align-self:center;">Conhecer o Plano 2 · Método dos 5 Pilares →</button>
+  </div>`;
 }
 function statRowHtml(){
   return `<div class="stat-row">
@@ -1521,6 +1627,20 @@ function bindHome(){
   root.querySelectorAll('[data-action="open-day"]').forEach(b=>b.addEventListener('click', ()=>{ V.pushedDay=b.dataset.day; V.dayState={}; render(); }));
   const nb = root.querySelector('[data-action="new-week"]');
   if(nb) nb.addEventListener('click', async ()=>{ nb.disabled=true; nb.textContent='Gerando…'; await startNewWeek(); render(); });
+  bindPlanSwitch();
+}
+// Shared by both plans' Home screens: a link to switch S.studyPlan and land
+// back on the (now different) Home. Plan 1 stays fully intact in state
+// (S.currentWeek, completedWeeks, etc.) while Plano 2 is active, and vice
+// versa — switching is just a lens on which Home/day-screens render.
+function bindPlanSwitch(){
+  const btn = root.querySelector('[data-action="switch-plan"]');
+  if(btn) btn.addEventListener('click', ()=>{
+    S.studyPlan = btn.dataset.plan;
+    save();
+    V.pushedDay = null; V.pushedPillar = null;
+    render();
+  });
 }
 
 /* ============================== DAY SCREENS ============================== */
@@ -2005,6 +2125,345 @@ function bindSunday(){
   });
   document.getElementById('recall-input').addEventListener('input', (e)=>{
     S.currentWeek.sundayRecall = e.target.value; save();
+  });
+}
+
+/* ============================== PLANO 2: "5 PILARES" ============================== */
+function viewPillarsHome(){
+  const doneCount = pillarsCompletedTodayCount();
+  return `<div class="pad">
+    ${statRowHtml()}
+    <div class="week-card">
+      <div class="week-topic">PLANO 2 · MÉTODO DOS 5 PILARES</div>
+      <div class="week-title">Prática diária</div>
+      <div class="progress-track"><div class="progress-fill" style="width:${(doneCount/PILLARS.length)*100}%"></div></div>
+      <div class="week-sub">${doneCount} de ${PILLARS.length} pilares praticados hoje</div>
+    </div>
+    <div class="day-list">
+      ${PILLARS.map(p=>{
+        const done = pillarDoneToday(p.id);
+        return `
+        <button class="day-row ${done?'done':''}" data-action="open-pillar" data-pillar="${p.id}">
+          <div class="day-badge">${icon(done?'check':p.icon)}</div>
+          <div class="day-text">
+            <div class="t">${esc(p.title)}</div>
+            <div class="s">${esc(p.subtitle)}</div>
+          </div>
+          ${done?`<div class="day-xp">+10 XP</div>`:icon('chevronRight','chev')}
+        </button>`;
+      }).join('')}
+    </div>
+    <p class="hint" style="text-align:center;">Baseado no método da Vânia Sausen: frases prontas em vez de palavras soltas, revisão ativa (PT → EN), só os tempos verbais essenciais, e listening + fala desde o primeiro dia.</p>
+    <button class="link-btn" data-action="switch-plan" data-plan="weekly" style="align-self:center;">← Voltar para o Plano 1 · Um texto por semana</button>
+  </div>`;
+}
+function bindPillarsHome(){
+  root.querySelectorAll('[data-action="open-pillar"]').forEach(b=>b.addEventListener('click', ()=>{ V.pushedPillar=b.dataset.pillar; V.dayState={}; render(); }));
+  bindPlanSwitch();
+}
+
+function pillarHeaderHtml(pillarId){
+  const p = pillarInfo(pillarId);
+  return `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:2px;">
+      <button class="topbar-btn icon-only" data-action="back-pillars">${icon('arrowLeft')}</button>
+      <div class="day-header" style="flex:1;">
+        <div class="day-badge" style="width:38px;height:38px;">${icon(p.icon)}</div>
+        <div>
+          <h2>${esc(p.title)}</h2>
+          <div class="s">${esc(p.subtitle)}</div>
+        </div>
+      </div>
+    </div>`;
+}
+function pillarFooterCta(pillarId, enabled){
+  const done = pillarDoneToday(pillarId);
+  return `<div class="footer-cta">
+    <button class="btn ${done?'ghost':'primary'}" data-action="complete-pillar" data-pillar="${pillarId}" ${(!enabled&&!done)?'disabled':''}>
+      ${done?icon('check'):''} ${done?'Praticado hoje':'Marcar como praticado hoje (+10 XP)'}
+    </button>
+  </div>`;
+}
+function bindBackAndCompletePillar(pillarId){
+  document.querySelector('[data-action="back-pillars"]').addEventListener('click', ()=>{ V.pushedPillar=null; render(); });
+  const btn = document.querySelector('[data-action="complete-pillar"]');
+  const alreadyDone = pillarDoneToday(pillarId);
+  if(btn && !alreadyDone){
+    btn.addEventListener('click', ()=>{
+      completePillarToday(pillarId);
+      render();
+      setTimeout(()=>{ if(V.pushedPillar===pillarId){ V.pushedPillar=null; render(); } }, 550);
+    });
+  }
+}
+function viewPillarScreen(id){
+  if(id==='phrases') return viewPillarPhrases();
+  if(id==='review') return viewPillarReview();
+  if(id==='grammar') return viewPillarGrammar();
+  if(id==='listening') return viewPillarListening();
+  if(id==='speaking') return viewPillarSpeaking();
+}
+function bindPillarScreen(id){
+  if(id==='phrases') return bindPillarPhrases();
+  if(id==='review') return bindPillarReview();
+  if(id==='grammar') return bindPillarGrammar();
+  if(id==='listening') return bindPillarListening();
+  if(id==='speaking') return bindPillarSpeaking();
+}
+
+/* ---- Pilar 1: Frases-chave ---- */
+function viewPillarPhrases(){
+  V.dayState.practicedSets = V.dayState.practicedSets || new Set(S.pillarTotals.phrasesDone||[]);
+  return `<div class="pad">
+    ${pillarHeaderHtml('phrases')}
+    <p class="hint">Não aprenda a palavra solta — aprenda a frase pronta onde ela aparece. Toque para ouvir, veja a tradução, e marque cada grupo como praticado.</p>
+    ${PILLAR_PHRASE_SETS.map(set=>`
+      <div class="card outline">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div><b style="font-family:var(--font-display);font-size:18px;">${esc(set.word)}</b> <span class="hint">— ${esc(set.meaning)}</span></div>
+          <button class="chunk-check ${V.dayState.practicedSets.has(set.id)?'on':''}" data-action="toggle-set" data-set="${set.id}">${icon('check')}</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${set.phrases.map(p=>`
+            <div class="sentence-row">
+              <button class="play-btn" data-action="play-phrase" data-text="${esc(p.en)}">${icon('play')}</button>
+              <div class="sentence-text">${esc(p.en)}<div class="hint">${esc(p.pt)}</div></div>
+            </div>`).join('')}
+        </div>
+      </div>`).join('')}
+  </div>
+  ${pillarFooterCta('phrases', V.dayState.practicedSets.size>0)}`;
+}
+function bindPillarPhrases(){
+  bindBackAndCompletePillar('phrases');
+  function refreshBtn(){
+    const btn = root.querySelector('[data-action="complete-pillar"]');
+    if(btn && !pillarDoneToday('phrases')) btn.disabled = V.dayState.practicedSets.size===0;
+  }
+  refreshBtn();
+  root.querySelectorAll('[data-action="toggle-set"]').forEach(b=>b.addEventListener('click', ()=>{
+    const id = b.dataset.set;
+    if(V.dayState.practicedSets.has(id)) V.dayState.practicedSets.delete(id); else V.dayState.practicedSets.add(id);
+    b.classList.toggle('on');
+    S.pillarTotals.phrasesDone = Array.from(V.dayState.practicedSets);
+    save();
+    refreshBtn();
+  }));
+  root.querySelectorAll('[data-action="play-phrase"]').forEach(b=>b.addEventListener('click', ()=>{
+    speakText(b.dataset.text, 0.9);
+  }));
+}
+
+/* ---- Pilar 2: Revisão ativa (recall PT -> EN, not EN -> PT recognition) ---- */
+function viewPillarReview(){
+  const deck = allPillarPhrases();
+  if(V.dayState.reviewIdx===undefined) V.dayState.reviewIdx = 0;
+  if(V.dayState.reviewRevealed===undefined) V.dayState.reviewRevealed = false;
+  if(V.dayState.reviewFinished===undefined) V.dayState.reviewFinished = false;
+  const idx = V.dayState.reviewIdx;
+  const finished = V.dayState.reviewFinished || idx >= deck.length;
+  let body;
+  if(finished){
+    body = `<div class="empty-state">
+      ${icon('star')}
+      <h2>Rodada concluída!</h2>
+      <p>Você tentou lembrar ${deck.length} frases em inglês a partir do português. Repita amanhã — é a revisão ativa que fixa de verdade, não só reler.</p>
+    </div>`;
+  } else {
+    const card = deck[idx];
+    body = `
+      <div class="rs-progress" style="padding:0;">
+        <div class="progress-track"><div class="progress-fill" style="width:${(idx/deck.length)*100}%"></div></div>
+        <div class="rs-count">${idx+1} de ${deck.length}</div>
+      </div>
+      <div class="card outline" style="margin-top:12px;">
+        <div style="font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--primary);text-transform:uppercase;">Como você fala isso em inglês?</div>
+        <div class="rs-cloze" style="margin-top:8px;">${esc(card.pt)}</div>
+        ${V.dayState.reviewRevealed?`
+          <div class="rs-answer">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="rs-expr">${esc(card.en)}</div>
+              <button class="speak-word" data-action="speak-word" data-w="${esc(card.en)}">${icon('headphones')}</button>
+            </div>
+          </div>`:''}
+      </div>
+      <div style="margin-top:12px;">
+        ${V.dayState.reviewRevealed
+          ? `<button class="btn primary" data-action="review-next">Próxima</button>`
+          : `<button class="btn ghost" data-action="review-reveal">Mostrar resposta</button>`}
+      </div>`;
+  }
+  return `<div class="pad">
+    ${pillarHeaderHtml('review')}
+    <p class="hint">O jeito certo de revisar: veja o português e tente lembrar como se fala em inglês, não o contrário. É mais difícil, mas é isso que treina de verdade a comunicação.</p>
+    ${body}
+  </div>
+  ${pillarFooterCta('review', V.dayState.reviewFinished)}`;
+}
+function bindPillarReview(){
+  bindBackAndCompletePillar('review');
+  function refreshBtn(){
+    const btn = root.querySelector('[data-action="complete-pillar"]');
+    if(btn && !pillarDoneToday('review')) btn.disabled = !V.dayState.reviewFinished;
+  }
+  refreshBtn();
+  const revealBtn = root.querySelector('[data-action="review-reveal"]');
+  if(revealBtn) revealBtn.addEventListener('click', ()=>{ V.dayState.reviewRevealed = true; render(); });
+  const nextBtn = root.querySelector('[data-action="review-next"]');
+  if(nextBtn) nextBtn.addEventListener('click', ()=>{
+    V.dayState.reviewIdx += 1;
+    V.dayState.reviewRevealed = false;
+    if(V.dayState.reviewIdx >= allPillarPhrases().length){
+      V.dayState.reviewFinished = true;
+      S.pillarTotals.reviewSessions = (S.pillarTotals.reviewSessions||0) + 1;
+      save();
+    }
+    render();
+  });
+  root.querySelectorAll('[data-action="speak-word"]').forEach(b=>b.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    speakText(e.currentTarget.dataset.w);
+  }));
+}
+
+/* ---- Pilar 3: Tempos verbais essenciais ---- */
+function viewPillarGrammar(){
+  V.dayState.studiedGrammar = V.dayState.studiedGrammar || new Set(S.pillarTotals.grammarDone||[]);
+  return `<div class="pad">
+    ${pillarHeaderHtml('grammar')}
+    <p class="hint">Só os tempos verbais que você realmente precisa pra começar a se comunicar — o resto você absorve com o tempo, ouvindo e lendo.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${PILLAR_GRAMMAR.map(g=>`
+        <div class="card outline">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <b style="font-size:14.5px;">${esc(g.title)}</b>
+            <button class="chunk-check ${V.dayState.studiedGrammar.has(g.id)?'on':''}" data-action="toggle-grammar-item" data-g="${g.id}">${icon('check')}</button>
+          </div>
+          <div class="grammar-exp" style="margin-top:4px;">${esc(g.why)}</div>
+          <div style="margin-top:8px;display:flex;flex-direction:column;gap:5px;">
+            ${g.examples.map(ex=>`<div class="grammar-ex" style="font-style:normal;">"${esc(ex.en)}" <span class="hint">— ${esc(ex.pt)}</span></div>`).join('')}
+          </div>
+        </div>`).join('')}
+    </div>
+  </div>
+  ${pillarFooterCta('grammar', V.dayState.studiedGrammar.size>0)}`;
+}
+function bindPillarGrammar(){
+  bindBackAndCompletePillar('grammar');
+  function refreshBtn(){
+    const btn = root.querySelector('[data-action="complete-pillar"]');
+    if(btn && !pillarDoneToday('grammar')) btn.disabled = V.dayState.studiedGrammar.size===0;
+  }
+  refreshBtn();
+  root.querySelectorAll('[data-action="toggle-grammar-item"]').forEach(b=>b.addEventListener('click', ()=>{
+    const id = b.dataset.g;
+    if(V.dayState.studiedGrammar.has(id)) V.dayState.studiedGrammar.delete(id); else V.dayState.studiedGrammar.add(id);
+    b.classList.toggle('on');
+    S.pillarTotals.grammarDone = Array.from(V.dayState.studiedGrammar);
+    save();
+    refreshBtn();
+  }));
+}
+
+/* ---- Pilar 4: Listening desde o dia 1 ---- */
+function viewPillarListening(){
+  V.dayState.listenedSets = V.dayState.listenedSets || new Set(S.pillarTotals.listeningDone||[]);
+  return `<div class="pad">
+    ${pillarHeaderHtml('listening')}
+    <p class="hint">Ouça devagar, quantas vezes precisar — é normal precisar ouvir 3, 4, 5 vezes. Depois repita em voz alta.</p>
+    ${PILLAR_PHRASE_SETS.map(set=>`
+      <div class="card outline">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <b style="font-family:var(--font-display);font-size:16px;">${esc(set.word)}</b>
+          <button class="chunk-check ${V.dayState.listenedSets.has(set.id)?'on':''}" data-action="toggle-listened" data-set="${set.id}">${icon('check')}</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${set.phrases.map(p=>`
+            <div class="sentence-row">
+              <button class="play-btn" data-action="play-phrase" data-text="${esc(p.en)}">${icon('play')}</button>
+              <div class="sentence-text">${esc(p.en)}</div>
+            </div>`).join('')}
+        </div>
+      </div>`).join('')}
+  </div>
+  ${pillarFooterCta('listening', V.dayState.listenedSets.size>0)}`;
+}
+function bindPillarListening(){
+  bindBackAndCompletePillar('listening');
+  function refreshBtn(){
+    const btn = root.querySelector('[data-action="complete-pillar"]');
+    if(btn && !pillarDoneToday('listening')) btn.disabled = V.dayState.listenedSets.size===0;
+  }
+  refreshBtn();
+  root.querySelectorAll('[data-action="toggle-listened"]').forEach(b=>b.addEventListener('click', ()=>{
+    const id = b.dataset.set;
+    if(V.dayState.listenedSets.has(id)) V.dayState.listenedSets.delete(id); else V.dayState.listenedSets.add(id);
+    b.classList.toggle('on');
+    S.pillarTotals.listeningDone = Array.from(V.dayState.listenedSets);
+    save();
+    refreshBtn();
+  }));
+  root.querySelectorAll('[data-action="play-phrase"]').forEach(b=>b.addEventListener('click', ()=>{
+    speakText(b.dataset.text, 0.75); // slower on purpose: comprehensible input for a learner, not native speed
+  }));
+}
+
+/* ---- Pilar 5: Fala desde o dia 1 (reuses Saturday's recorder) ---- */
+function viewPillarSpeaking(){
+  V.dayState.spokenPrompts = V.dayState.spokenPrompts || new Set();
+  return `<div class="pad">
+    ${pillarHeaderHtml('speaking')}
+    <p class="hint">Fale em voz alta, mesmo frases simples. Não tenha medo de errar — é errando que se aprende.</p>
+    <div class="card outline" style="gap:12px;display:flex;flex-direction:column;">
+      <button class="btn tint-red" data-action="rec-toggle">${icon('mic')} <span id="rec-label">Gravar minha fala</span></button>
+      <audio id="rec-player" controls style="width:100%;${recordedUrl?'':'display:none;'}" src="${recordedUrl||''}"></audio>
+      <div id="rec-error" class="warn-text" style="display:none;">Permissão de microfone negada. Você ainda pode marcar abaixo que praticou.</div>
+    </div>
+    <div class="section-label">Sugestões pra falar hoje</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${PILLAR_SPEAKING_PROMPTS.map((p,i)=>`
+        <div class="qa-card" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div class="qa-q" style="font-weight:500;">${esc(p)}</div>
+          <button class="chunk-check ${V.dayState.spokenPrompts.has(String(i))?'on':''}" data-action="toggle-spoken" data-i="${i}">${icon('check')}</button>
+        </div>`).join('')}
+    </div>
+  </div>
+  ${pillarFooterCta('speaking', V.dayState.spokenPrompts.size>0 || !!recordedUrl)}`;
+}
+function bindPillarSpeaking(){
+  bindBackAndCompletePillar('speaking');
+  function refreshBtn(){
+    const btn = root.querySelector('[data-action="complete-pillar"]');
+    if(btn && !pillarDoneToday('speaking')) btn.disabled = !(V.dayState.spokenPrompts.size>0 || recordedUrl);
+  }
+  refreshBtn();
+  root.querySelectorAll('[data-action="toggle-spoken"]').forEach(b=>b.addEventListener('click', ()=>{
+    const i = b.dataset.i;
+    if(V.dayState.spokenPrompts.has(i)) V.dayState.spokenPrompts.delete(i); else V.dayState.spokenPrompts.add(i);
+    b.classList.toggle('on');
+    refreshBtn();
+  }));
+  document.querySelector('[data-action="rec-toggle"]').addEventListener('click', async ()=>{
+    const label = document.getElementById('rec-label');
+    if(mediaRecorder && mediaRecorder.state==='recording'){ mediaRecorder.stop(); label.textContent='Gravar minha fala'; return; }
+    try{
+      mediaStream = await navigator.mediaDevices.getUserMedia({audio:true});
+      recordedChunksArr = [];
+      mediaRecorder = new MediaRecorder(mediaStream);
+      mediaRecorder.ondataavailable = ev => recordedChunksArr.push(ev.data);
+      mediaRecorder.onstop = ()=>{
+        const blob = new Blob(recordedChunksArr, {type:'audio/webm'});
+        recordedUrl = URL.createObjectURL(blob);
+        const player = document.getElementById('rec-player');
+        player.src = recordedUrl; player.style.display='block';
+        mediaStream.getTracks().forEach(t=>t.stop());
+        refreshBtn();
+      };
+      mediaRecorder.start();
+      label.textContent = 'Parar gravação';
+    }catch(err){
+      document.getElementById('rec-error').style.display='block';
+    }
   });
 }
 
