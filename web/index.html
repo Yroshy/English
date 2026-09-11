@@ -985,11 +985,11 @@ function bindTapWords(container){
   container.querySelectorAll('.tap-word').forEach(span => {
     span.addEventListener('click', (e) => {
       e.stopPropagation();
-      showWordPopover(span.dataset.w);
+      showWordPopover(span.dataset.w, span);
     });
   });
 }
-function showWordPopover(word){
+function showWordPopover(word, anchorEl){
   hideWordPopover();
   const weeklyText = S.currentWeek && S.currentWeek.weeklyText;
   const chunkMap = weeklyText ? buildChunkWordMap(weeklyText) : {};
@@ -1002,6 +1002,7 @@ function showWordPopover(word){
 
   const pop = document.createElement('div');
   pop.className = 'word-pop';
+  pop.style.visibility = 'hidden';
   pop.innerHTML = chunk ? `
     <div class="eyebrow">Chunk da semana</div>
     <div class="headword"><b>${esc(chunk.expression)}</b><button class="speak-word" data-action="speak-word" data-w="${esc(chunk.expression)}">${icon('headphones')}</button></div>
@@ -1015,6 +1016,34 @@ function showWordPopover(word){
 
   shell.appendChild(backdrop);
   shell.appendChild(pop);
+
+  // Anchor the popover right next to the tapped word instead of always
+  // pinning it to the bottom of the screen, flipping above the word (and
+  // clamping inside the shell) whenever there isn't room below.
+  const shellRect = shell.getBoundingClientRect();
+  const shellHeight = shell.clientHeight;
+  const popHeight = pop.offsetHeight;
+  let top;
+  if (anchorEl) {
+    const wr = anchorEl.getBoundingClientRect();
+    const relTop = wr.top - shellRect.top;
+    const relBottom = wr.bottom - shellRect.top;
+    const spaceBelow = shellHeight - relBottom;
+    const spaceAbove = relTop;
+    if (spaceBelow >= popHeight + 16) {
+      top = relBottom + 10;
+    } else if (spaceAbove >= popHeight + 16) {
+      top = relTop - popHeight - 10;
+    } else {
+      top = Math.max(10, Math.min(shellHeight - popHeight - 10, relBottom + 10));
+    }
+  } else {
+    top = shellHeight - popHeight - 14;
+  }
+  pop.style.top = top + 'px';
+  pop.style.bottom = 'auto';
+  pop.style.visibility = 'visible';
+
   pop.querySelector('[data-action="speak-word"]').addEventListener('click', (e) => {
     e.stopPropagation();
     speakText(e.currentTarget.dataset.w);
