@@ -1792,8 +1792,25 @@ function viewLevelChange(){
 }
 function bindLevelChange(){
   document.querySelectorAll('[data-action="close-overlay"]').forEach(b=>b.addEventListener('click', closeModal));
-  document.querySelectorAll('[data-action="pick-level"]').forEach(b=>b.addEventListener('click', ()=>{
-    S.level = b.dataset.level; save(); closeModal();
+  document.querySelectorAll('[data-action="pick-level"]').forEach(b=>b.addEventListener('click', async (e)=>{
+    const newLevel = e.currentTarget.dataset.level;
+    if (newLevel === S.level) { closeModal(); return; }
+    const week = S.currentWeek;
+    const hasProgress = week && !weekIsComplete(week) && week.completedDays.length > 0;
+    if (hasProgress) {
+      const ok = confirm(`Trocar de nível gera um novo texto da semana nesse nível. Seu progresso na semana atual (${week.completedDays.length} de 7 dias) será perdido. Continuar?`);
+      if (!ok) return;
+    }
+    S.level = newLevel;
+    save();
+    // Regenerate immediately so the level change is actually visible —
+    // otherwise the old week's text (from the previous level) just keeps
+    // showing until "Novo texto da semana" is tapped separately.
+    await startNewWeek();
+    V.modal = null;
+    V.pushedDay = null;
+    V.tab = 'home';
+    render();
   }));
 }
 
