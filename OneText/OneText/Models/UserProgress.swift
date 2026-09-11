@@ -27,6 +27,10 @@ struct UserProgress: Codable {
     var currentWeek: WeekRecord?
     var completedWeeks: [WeekRecord] = []
     var hasOnboarded: Bool = false
+    /// Spaced-repetition pool built from every week's chunks (once Monday is
+    /// done), independent of which week is currently in progress — this is
+    /// what lets the learner review past texts during the current week.
+    var reviewCards: [ReviewCard] = []
 
     var weeksCompletedCount: Int { completedWeeks.count }
 }

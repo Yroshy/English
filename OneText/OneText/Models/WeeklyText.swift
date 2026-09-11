@@ -20,9 +20,14 @@ struct KeyChunk: Codable, Identifiable, Hashable {
     let meaningPT: String
     let exampleFromText: String
     var collocations: [String]
+    /// A NEW sentence (not from the original text) that applies one of the
+    /// chunk's collocations to a different everyday situation — the "contexto
+    /// de aplicação" that reinforces the expression beyond its single
+    /// occurrence in the weekly text.
+    let usageExample: String
 
     enum CodingKeys: String, CodingKey {
-        case expression, meaningPT, exampleFromText, collocations
+        case expression, meaningPT, exampleFromText, collocations, usageExample
     }
 }
 

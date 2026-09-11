@@ -75,6 +75,9 @@ final class ProgressStore: ObservableObject {
         if !alreadyDone {
             progress.xpTotal += day.xpReward
             registerActivityToday()
+            if day == .monday {
+                enqueueReviewCards(for: week)
+            }
         }
 
         if week.isComplete {
@@ -89,6 +92,47 @@ final class ProgressStore: ObservableObject {
         guard let week = progress.currentWeek, week.isComplete else { return }
         progress.completedWeeks.append(week)
         progress.currentWeek = nil
+    }
+
+    // MARK: - Spaced repetition review
+
+    /// Adds one review card per key chunk of a just-completed Monday, so the
+    /// learner can start reviewing this week's expressions immediately — and
+    /// keeps growing the pool with every past week, regardless of which week
+    /// is currently active.
+    private func enqueueReviewCards(for week: WeekRecord) {
+        let existingKeys = Set(progress.reviewCards.map { "\($0.sourceTitle)|\($0.expression)" })
+        let newCards = week.weeklyText.keyChunks
+            .map { ReviewCard(chunk: $0, sourceTitle: week.weeklyText.title, sourceLevel: week.weeklyText.level) }
+            .filter { !existingKeys.contains("\($0.sourceTitle)|\($0.expression)") }
+        progress.reviewCards.append(contentsOf: newCards)
+    }
+
+    /// Cards due for review right now, oldest-due first, across ALL studied
+    /// weeks (past and current).
+    func dueReviewCards(limit: Int = 20) -> [ReviewCard] {
+        let now = Date()
+        return progress.reviewCards
+            .filter { $0.dueDate <= now }
+            .sorted { $0.dueDate < $1.dueDate }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    var totalReviewCardCount: Int { progress.reviewCards.count }
+    var dueReviewCardCount: Int { progress.reviewCards.filter { $0.dueDate <= Date() }.count }
+
+    /// Grades a card (Again/Good/Easy), reschedules it with the SM-2-style
+    /// algorithm, and rewards a small amount of XP — reviewing counts as
+    /// daily activity for the streak too, just like completing a mission.
+    @discardableResult
+    func gradeReviewCard(_ cardID: UUID, grade: ReviewGrade) -> Bool {
+        guard let index = progress.reviewCards.firstIndex(where: { $0.id == cardID }) else { return false }
+        SpacedRepetition.schedule(&progress.reviewCards[index], grade: grade)
+        progress.xpTotal += 5
+        registerActivityToday()
+        persist()
+        return true
     }
 
     // MARK: - Streak

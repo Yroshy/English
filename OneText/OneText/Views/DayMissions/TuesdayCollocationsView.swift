@@ -40,6 +40,17 @@ struct TuesdayCollocationsView: View {
                                 }
                             }
 
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("CONTEXTO DE APLICAÇÃO")
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(.tint)
+                                Text(chunk.usageExample)
+                                    .font(.subheadline.italic())
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.accentColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+
                             Button {
                                 Task { await loadMore(for: chunk) }
                             } label: {

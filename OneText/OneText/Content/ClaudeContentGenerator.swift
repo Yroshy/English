@@ -51,7 +51,8 @@ final class ClaudeContentGenerator: ContentGenerating {
             {"expression": "a multi-word chunk/expression from the text (never a single isolated word)",
              "meaningPT": "meaning in Brazilian Portuguese",
              "exampleFromText": "the sentence from the text containing it",
-             "collocations": ["3 collocations using this chunk"]}
+             "collocations": ["3 collocations using this chunk"],
+             "usageExample": "a NEW sentence, different from exampleFromText, that applies one of the collocations to a different everyday situation (this is the 'contexto de aplicação' that reinforces the expression)"}
           ],
           "grammarPoints": [
             {"title": "short PT title of the grammar point",
