@@ -1,0 +1,1442 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2B3A67">
+<title>OneText</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;1,400&family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+  :root{
+    --ground:#F5F6F8;
+    --surface:#FFFFFF;
+    --surface-2:#ECEEF3;
+    --border:#DDE1E9;
+    --ink:#1C2333;
+    --ink-muted:#5B6478;
+    --ink-faint:#8A93A6;
+    --primary:#2B3A67;
+    --primary-strong:#1B2748;
+    --primary-soft:#E4E8F5;
+    --on-primary:#F6F7FB;
+    --accent:#D9713C;
+    --accent-soft:#F7E4D4;
+    --success:#3F9142;
+    --success-soft:#DFEFDE;
+    --danger:#C1503F;
+    --danger-soft:#F6DFDA;
+    --shadow-sm:0 1px 2px rgba(28,35,51,.06);
+    --shadow-md:0 1px 2px rgba(28,35,51,.06),0 8px 24px rgba(28,35,51,.08);
+    --radius-lg:18px;
+    --radius-md:14px;
+    --radius-sm:10px;
+    --font-display:'Fraunces',Georgia,'Times New Roman',serif;
+    --font-serif:'Source Serif 4',Georgia,serif;
+    --font-ui:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#10131C;
+      --surface:#191D2A;
+      --surface-2:#212636;
+      --border:#2B3145;
+      --ink:#ECEEF5;
+      --ink-muted:#A7AEC2;
+      --ink-faint:#747C92;
+      --primary:#8593D6;
+      --primary-strong:#A6B1E6;
+      --primary-soft:#232B47;
+      --on-primary:#12151F;
+      --accent:#F0995A;
+      --accent-soft:#3A2A20;
+      --success:#6FCB72;
+      --success-soft:#1E3320;
+      --danger:#E38071;
+      --danger-soft:#3A2320;
+      --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+      --shadow-md:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.5);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#10131C;
+    --surface:#191D2A;
+    --surface-2:#212636;
+    --border:#2B3145;
+    --ink:#ECEEF5;
+    --ink-muted:#A7AEC2;
+    --ink-faint:#747C92;
+    --primary:#8593D6;
+    --primary-strong:#A6B1E6;
+    --primary-soft:#232B47;
+    --on-primary:#12151F;
+    --accent:#F0995A;
+    --accent-soft:#3A2A20;
+    --success:#6FCB72;
+    --success-soft:#1E3320;
+    --danger:#E38071;
+    --danger-soft:#3A2320;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+    --shadow-md:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.5);
+    color-scheme: dark;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--ground);
+    color:var(--ink);
+    font-family:var(--font-ui);
+    -webkit-font-smoothing:antialiased;
+    display:flex;
+    justify-content:center;
+    overscroll-behavior-y:none;
+  }
+  #app-shell{
+    width:100%;
+    max-width:480px;
+    height:100dvh;
+    background:var(--surface);
+    display:flex;
+    flex-direction:column;
+    position:relative;
+    overflow:hidden;
+  }
+  @media (min-width:640px){
+    body{ align-items:center; padding-block:28px; }
+    #app-shell{
+      height:min(860px,94dvh);
+      border-radius:32px;
+      box-shadow:var(--shadow-md), 0 0 0 10px var(--surface-2);
+      border:1px solid var(--border);
+    }
+  }
+
+  h1,h2,h3{ font-family:var(--font-display); font-weight:600; text-wrap:balance; margin:0; }
+  p{ margin:0; }
+  button{ font-family:var(--font-ui); }
+  .icon{ width:1.1em; height:1.1em; display:inline-block; vertical-align:-0.18em; flex-shrink:0; }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px 10px;
+    flex-shrink:0;
+  }
+  .topbar-btn{
+    display:flex; align-items:center; gap:6px;
+    background:var(--surface-2); color:var(--ink);
+    border:none; border-radius:999px; padding:7px 12px;
+    font-size:13px; font-weight:700; cursor:pointer;
+  }
+  .topbar-btn.icon-only{ padding:8px; }
+  .brand{ font-family:var(--font-display); font-weight:700; font-size:19px; letter-spacing:-0.01em; }
+
+  /* ---------- scroll area ---------- */
+  .main-scroll{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:8px; }
+  .pad{ padding:6px 18px 28px; display:flex; flex-direction:column; gap:18px; }
+
+  /* ---------- tab bar ---------- */
+  .tabbar{
+    flex-shrink:0; display:flex; border-top:1px solid var(--border);
+    background:var(--surface); padding-bottom:env(safe-area-inset-bottom);
+  }
+  .tab-btn{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:9px 4px 8px; background:none; border:none; color:var(--ink-faint);
+    font-size:11px; font-weight:700; cursor:pointer; position:relative;
+  }
+  .tab-btn.active{ color:var(--primary); }
+  .tab-btn .icon{ width:22px; height:22px; }
+  .tab-badge{
+    position:absolute; top:2px; right:calc(50% - 20px);
+    background:var(--accent); color:var(--on-primary); font-size:10px; font-weight:800;
+    min-width:16px; height:16px; border-radius:999px; display:flex; align-items:center; justify-content:center;
+    padding:0 4px;
+  }
+
+  /* ---------- streak / xp chip ---------- */
+  .stat-row{ display:flex; gap:10px; }
+  .stat-chip{
+    flex:1; display:flex; align-items:center; gap:8px;
+    background:var(--surface-2); border-radius:999px; padding:9px 14px;
+  }
+  .stat-chip .icon{ width:18px; height:18px; }
+  .stat-chip .flame{ color:var(--accent); }
+  .stat-chip .star{ color:#C99A2E; }
+  .stat-num{ font-weight:800; font-size:15px; font-variant-numeric:tabular-nums; }
+  .stat-label{ font-size:11px; color:var(--ink-muted); font-weight:600; }
+
+  /* ---------- card ---------- */
+  .card{
+    background:var(--surface-2); border-radius:var(--radius-md); padding:16px;
+  }
+  .card.outline{ background:var(--surface); border:1px solid var(--border); }
+
+  /* ---------- week header ---------- */
+  .week-card{ background:var(--primary-soft); border-radius:var(--radius-lg); padding:18px; }
+  .week-topic{ font-size:11px; font-weight:800; letter-spacing:.06em; color:var(--primary); text-transform:uppercase; }
+  .week-title{ font-family:var(--font-display); font-size:22px; font-weight:600; margin-top:4px; }
+  .progress-track{ height:6px; border-radius:999px; background:rgba(0,0,0,.08); margin-top:12px; overflow:hidden; }
+  :root[data-theme="dark"] .progress-track, @media (prefers-color-scheme:dark){ .progress-track{ background:rgba(255,255,255,.12); } }
+  .progress-fill{ height:100%; background:var(--primary); border-radius:999px; transition:width .3s ease; }
+  .week-sub{ margin-top:8px; font-size:12px; color:var(--ink-muted); font-weight:600; }
+
+  /* ---------- day list ---------- */
+  .day-list{ display:flex; flex-direction:column; gap:10px; position:relative; }
+  .day-row{
+    display:flex; align-items:center; gap:12px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius-md); padding:11px 12px;
+    text-align:left; width:100%; cursor:pointer;
+  }
+  .day-row.next{ border-color:var(--primary); box-shadow:0 0 0 1px var(--primary); }
+  .day-row.done{ opacity:.72; }
+  .day-badge{
+    width:40px; height:40px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; color:#fff; background:var(--primary);
+  }
+  .day-row.done .day-badge{ background:var(--success); }
+  .day-badge .icon{ width:19px; height:19px; }
+  .day-text{ flex:1; min-width:0; }
+  .day-text .t{ font-size:14px; font-weight:700; }
+  .day-text .s{ font-size:11.5px; color:var(--ink-muted); margin-top:1px; }
+  .day-xp{ font-size:11px; font-weight:800; color:var(--success); flex-shrink:0; }
+  .chev{ color:var(--ink-faint); width:16px; height:16px; flex-shrink:0; }
+
+  /* ---------- buttons ---------- */
+  .btn{
+    border:none; border-radius:999px; padding:13px 20px; font-weight:800; font-size:14.5px;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+  }
+  .btn.primary{ background:var(--primary); color:var(--on-primary); }
+  .btn.primary:disabled{ opacity:.4; }
+  .btn.ghost{ background:var(--surface-2); color:var(--ink); }
+  .btn.danger-ghost{ background:var(--danger-soft); color:var(--danger); }
+  .btn.sm{ padding:9px 14px; font-size:13px; width:auto; }
+  .btn.block-sm{ padding:10px 14px; font-size:13px; }
+  .btn.tint-red{ background:var(--danger); color:#fff; }
+  .btn.tint-blue{ background:var(--primary); color:var(--on-primary); }
+  .btn.tint-green{ background:var(--success); color:#fff; }
+  .link-btn{ background:none; border:none; color:var(--primary); font-weight:700; font-size:13px; cursor:pointer; padding:0; }
+
+  /* ---------- day screen ---------- */
+  .day-header{ display:flex; align-items:center; gap:12px; }
+  .day-header .day-badge{ width:46px; height:46px; }
+  .day-header .icon{ width:20px; height:20px; }
+  .day-header h2{ font-size:17px; }
+  .day-header .s{ font-size:12px; color:var(--ink-muted); margin-top:1px; }
+  .level-pill{
+    margin-left:auto; font-size:11px; font-weight:800; background:var(--primary-soft); color:var(--primary);
+    padding:4px 9px; border-radius:999px; flex-shrink:0;
+  }
+  .section-label{ font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-muted); }
+  .body-text{ font-family:var(--font-serif); font-size:16.5px; line-height:1.6; }
+
+  .qa-card{ background:var(--surface-2); border-radius:var(--radius-sm); padding:12px; }
+  .qa-q{ font-size:13.5px; font-weight:700; }
+  .qa-a{ font-size:12.5px; color:var(--ink-muted); margin-top:5px; }
+
+  .chunk-row{ background:var(--surface-2); border-radius:var(--radius-sm); padding:12px; display:flex; gap:10px; align-items:flex-start; cursor:pointer; }
+  .chunk-check{ width:20px; height:20px; border-radius:50%; border:2px solid var(--ink-faint); flex-shrink:0; margin-top:1px; display:flex; align-items:center; justify-content:center; background:none; padding:0; cursor:pointer; }
+  .chunk-check.on{ border-color:var(--success); background:var(--success); color:#fff; }
+  .chunk-check .icon{ width:12px; height:12px; display:none; }
+  .chunk-check.on .icon{ display:block; }
+  .chunk-expr{ font-weight:700; font-size:14.5px; }
+  .chunk-mean{ font-size:12.5px; color:var(--ink-muted); margin-top:2px; }
+  .chunk-ex{ font-size:12px; color:var(--ink-faint); font-style:italic; margin-top:4px; }
+
+  .colloc-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:13px; display:flex; flex-direction:column; gap:9px; }
+  .colloc-list{ display:flex; flex-direction:column; gap:4px; }
+  .colloc-item{ font-size:13.5px; display:flex; gap:6px; }
+  .usage-box{ background:var(--accent-soft); border-radius:8px; padding:9px 10px; }
+  .usage-label{ font-size:10px; font-weight:800; letter-spacing:.05em; color:var(--accent); }
+  .usage-text{ font-size:13px; font-style:italic; margin-top:2px; }
+
+  .sentence-row{ display:flex; align-items:center; gap:10px; background:var(--surface-2); border-radius:var(--radius-sm); padding:10px 12px; }
+  .play-btn{ width:34px; height:34px; border-radius:50%; background:var(--primary); color:var(--on-primary); border:none; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; }
+  .play-btn .icon{ width:16px; height:16px; }
+  .play-btn.playing{ background:var(--accent); }
+  .sentence-text{ flex:1; font-family:var(--font-serif); font-size:14.5px; }
+
+  .grammar-card{ background:var(--surface-2); border-radius:var(--radius-sm); padding:13px; cursor:pointer; }
+  .grammar-title{ display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:14px; }
+  .grammar-exp{ font-size:12.5px; color:var(--ink-muted); margin-top:5px; }
+  .grammar-ex{ font-size:12px; font-style:italic; color:var(--ink-faint); margin-top:5px; }
+
+  textarea{
+    width:100%; min-height:130px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    background:var(--surface); color:var(--ink); font-family:var(--font-ui); font-size:14px; padding:12px; resize:vertical;
+  }
+  textarea:focus, input:focus{ outline:2px solid var(--primary); outline-offset:1px; }
+
+  .toggle-row{ display:flex; align-items:center; justify-content:space-between; background:var(--surface-2); border-radius:var(--radius-sm); padding:12px 14px; }
+  .switch{ width:44px; height:26px; border-radius:999px; background:var(--border); position:relative; cursor:pointer; flex-shrink:0; border:none; }
+  .switch.on{ background:var(--primary); }
+  .switch::after{ content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:transform .15s ease; }
+  .switch.on::after{ transform:translateX(18px); }
+
+  .footer-cta{ padding:12px 18px calc(14px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); flex-shrink:0; }
+
+  .empty-state{ text-align:center; padding:50px 20px 20px; display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .empty-state .icon{ width:42px; height:42px; color:var(--primary); }
+  .empty-state h2{ font-size:18px; }
+  .empty-state p{ font-size:13.5px; color:var(--ink-muted); line-height:1.5; }
+
+  .banner{ background:var(--primary-soft); border-radius:var(--radius-lg); padding:18px; display:flex; flex-direction:column; gap:10px; align-items:center; text-align:center; }
+
+  /* ---------- onboarding ---------- */
+  .onb-hero{ text-align:center; padding:38px 24px 10px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .onb-hero .icon{ width:38px; height:38px; color:var(--primary); }
+  .onb-hero h1{ font-size:26px; }
+  .onb-hero p{ font-size:13.5px; color:var(--ink-muted); line-height:1.5; max-width:300px; }
+  .level-grid{ display:grid; grid-template-columns:1fr 1fr; gap:11px; padding:14px 18px 28px; }
+  .level-card{ background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-md); padding:14px; text-align:left; cursor:pointer; display:flex; flex-direction:column; gap:4px; min-height:118px; }
+  .level-card .code{ font-family:var(--font-display); font-size:20px; font-weight:700; }
+  .level-card .name{ font-size:12px; font-weight:800; color:var(--primary); }
+  .level-card .desc{ font-size:11px; color:var(--ink-muted); line-height:1.4; margin-top:2px; }
+
+  /* ---------- modal overlay ---------- */
+  .overlay{
+    position:absolute; inset:0; background:var(--surface); z-index:20;
+    display:flex; flex-direction:column;
+  }
+  .overlay-header{
+    display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .overlay-title{ font-family:var(--font-display); font-weight:700; font-size:16px; }
+  .overlay-body{ flex:1; overflow-y:auto; }
+
+  /* ---------- review session ---------- */
+  .rs-progress{ padding:14px 18px 0; }
+  .rs-count{ text-align:center; font-size:11px; color:var(--ink-muted); font-weight:700; margin-top:6px; }
+  .rs-source{ display:flex; justify-content:space-between; font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:.04em; }
+  .rs-cloze{ font-family:var(--font-serif); font-size:19px; line-height:1.55; margin-top:14px; }
+  .rs-answer{ margin-top:16px; padding-top:16px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:14px; }
+  .rs-expr{ font-size:17px; font-weight:700; }
+  .rs-mean{ font-size:13.5px; color:var(--ink-muted); margin-top:2px; }
+  .grade-row{ display:flex; gap:8px; padding:14px 18px calc(16px + env(safe-area-inset-bottom)); }
+  .grade-btn{ flex:1; border:none; border-radius:var(--radius-sm); padding:12px 4px; font-weight:800; font-size:12.5px; color:#fff; cursor:pointer; }
+
+  .settings-row{ display:flex; justify-content:space-between; align-items:center; padding:13px 18px; border-bottom:1px solid var(--border); font-size:13.5px; }
+  .settings-row .v{ color:var(--ink-muted); font-variant-numeric:tabular-nums; }
+  input[type="password"], input[type="text"]{
+    width:100%; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-2);
+    color:var(--ink); font-family:var(--font-ui); font-size:14px; padding:11px 12px;
+  }
+  .hint{ font-size:11.5px; color:var(--ink-faint); line-height:1.5; }
+  .warn-text{ font-size:12px; color:var(--accent); font-weight:700; }
+
+  ::-webkit-scrollbar{ width:0; height:0; }
+</style>
+</head>
+<body>
+<div id="app-shell"><div id="app"></div></div>
+
+<script>
+"use strict";
+
+/* ============================== ICONS ============================== */
+const ICONS = {
+  book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  link:'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  headphones:'<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>',
+  bookOpen:'<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  pencil:'<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  mic:'<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>',
+  refresh:'<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>',
+  flame:'<path d="M12 2c0 0-6 7-6 12a6 6 0 0 0 12 0c0-2-1-4-2-5 .3 1.6-.5 2.6-1 2 .8-2.6-1-5.6-3-9z"/>',
+  star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  check:'<polyline points="20 6 9 17 4 12"/>',
+  chevronRight:'<polyline points="9 18 15 12 9 6"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  x:'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  play:'<polygon points="5 3 19 12 5 21 5 3"/>',
+  square:'<rect x="6" y="6" width="12" height="12" rx="1"/>',
+  arrowLeft:'<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
+  zap:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  layers:'<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
+  circle:'<circle cx="12" cy="12" r="9"/>',
+};
+function icon(name, cls){
+  return `<svg class="icon${cls?' '+cls:''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`;
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ============================== CONTENT ============================== */
+const CEFR_LEVELS = [
+  {id:'a1', code:'A1', name:'Iniciante', desc:'Frases simples do dia a dia, vocabulário essencial.'},
+  {id:'a2', code:'A2', name:'Básico', desc:'Rotinas, descrições curtas, necessidades imediatas.'},
+  {id:'b1', code:'B1', name:'Intermediário', desc:'Textos conectados sobre trabalho, viagens e o cotidiano.'},
+  {id:'b2', code:'B2', name:'Interm. Superior', desc:'Textos mais longos, opiniões e argumentos claros.'},
+  {id:'c1', code:'C1', name:'Avançado', desc:'Textos complexos, nuances e vocabulário variado.'},
+  {id:'c2', code:'C2', name:'Proficiente', desc:'Fluência quase nativa, textos ricos e idiomáticos.'},
+];
+function levelInfo(id){ return CEFR_LEVELS.find(l=>l.id===id); }
+
+const STUDY_DAYS = [
+  {id:'monday', short:'Seg', title:'Leitura e Interpretação', subtitle:'Entenda o texto e anote 5 chunks novos', icon:'book', xp:15},
+  {id:'tuesday', short:'Ter', title:'Collocations', subtitle:'Descubra com quais palavras seus chunks combinam', icon:'link', xp:15},
+  {id:'wednesday', short:'Qua', title:'Listening & Shadowing', subtitle:'Ouça e repita imitando ritmo e entonação', icon:'headphones', xp:15},
+  {id:'thursday', short:'Qui', title:'Gramática em Contexto', subtitle:'Veja a gramática escondida no texto', icon:'bookOpen', xp:15},
+  {id:'friday', short:'Sex', title:'Produção Escrita', subtitle:'Escreva sobre a sua própria rotina', icon:'pencil', xp:15},
+  {id:'saturday', short:'Sáb', title:'Prática de Fala', subtitle:'Leia em voz alta e grave sua pronúncia', icon:'mic', xp:15},
+  {id:'sunday', short:'Dom', title:'Revisão Ativa', subtitle:'Feche o material e tente lembrar tudo', icon:'refresh', xp:25},
+];
+function dayInfo(id){ return STUDY_DAYS.find(d=>d.id===id); }
+
+// One hand-written, richly-detailed everyday routine text per CEFR level —
+// ported 1:1 from the native app's offline seed bank, so both versions teach
+// the same content.
+const SEED_TEXTS = {
+  a1: {
+    level:'a1', topic:'Rotina da manhã', title:"Ana's Morning",
+    body:"Every day, Ana wakes up at six thirty. She gets out of bed and opens the curtains. First, she brushes her teeth and takes a quick shower. Then she gets dressed and goes to the kitchen. She makes a cup of coffee and eats a piece of toast with butter. At seven fifteen, she packs her bag and leaves the house. She walks to the bus stop and waits for the bus. The bus arrives at seven thirty, and Ana goes to work.",
+    questions:[
+      {q:"What time does Ana wake up?", a:"At six thirty."},
+      {q:"What does she eat for breakfast?", a:"Toast with butter."},
+      {q:"How does Ana get to work?", a:"She walks to the bus stop and takes the bus."},
+    ],
+    chunks:[
+      {expression:"wake up", meaning:"acordar", example:"Ana wakes up at six thirty.", collocations:["wake up early","wake up late","wake up tired"], usage:"On weekends, I like to wake up late and relax."},
+      {expression:"get dressed", meaning:"se vestir", example:"She gets dressed and goes to the kitchen.", collocations:["get dressed quickly","get dressed for work","get dressed in the morning"], usage:"The kids get dressed for school every morning."},
+      {expression:"a cup of coffee", meaning:"uma xícara de café", example:"She makes a cup of coffee.", collocations:["a cup of tea","a hot cup of coffee","a strong cup of coffee"], usage:"Can I have a strong cup of coffee, please?"},
+      {expression:"pack her bag", meaning:"arrumar a bolsa/mochila", example:"She packs her bag and leaves the house.", collocations:["pack a bag quickly","pack your bag the night before","pack a school bag"], usage:"He always packs his bag the night before a trip."},
+      {expression:"go to work", meaning:"ir trabalhar", example:"The bus arrives, and Ana goes to work.", collocations:["go to work by bus","go to work early","go to work on foot"], usage:"My brother goes to work by bus every day."},
+    ],
+    grammar:[
+      {title:"Simple Present para rotinas", exp:"Usamos o Simple Present para hábitos e rotinas diárias. Na 3ª pessoa (she/he/it), o verbo recebe -s: wakes, gets, makes, goes.", example:"Ana wakes up at six thirty."},
+      {title:"Preposições de tempo (at / in)", exp:'Usamos "at" com horários exatos (at six thirty) e "in the" com partes do dia (in the morning).', example:"At seven fifteen, she packs her bag."},
+    ],
+    writingPrompt:"Escreva de 5 a 10 frases descrevendo a SUA rotina de manhã, usando o Simple Present. Tente usar pelo menos 2 dos chunks estudados.",
+    speakingPrompt:"Leia o texto em voz alta 3 vezes. Depois, tente contar sua própria rotina de manhã sem olhar para o papel.",
+  },
+  a2: {
+    level:'a2', topic:'Indo para o trabalho', title:"Marcos's Commute",
+    body:"Marcos lives in a small apartment near the city center, but he works on the other side of town. Every morning, he leaves home at seven and walks to the train station. He usually buys a coffee to go before he gets on the train. The train is often crowded, so he doesn't always find a seat. During the trip, he listens to music or checks his phone. The journey takes about forty minutes. When he arrives at the station, he still has to walk ten minutes to his office. On rainy days, the commute takes longer because of the traffic and the crowds.",
+    questions:[
+      {q:"Where does Marcos work compared to where he lives?", a:"On the other side of town."},
+      {q:"What does he usually do during the train trip?", a:"He listens to music or checks his phone."},
+      {q:"Why does the commute take longer on rainy days?", a:"Because of the traffic and the crowds."},
+    ],
+    chunks:[
+      {expression:"leave home", meaning:"sair de casa", example:"He leaves home at seven.", collocations:["leave home early","leave home on time","leave home in a hurry"], usage:"We need to leave home early to avoid traffic."},
+      {expression:"get on the train", meaning:"entrar/embarcar no trem", example:"He buys a coffee before he gets on the train.", collocations:["get on the bus","get on time","get off the train"], usage:"Hurry up, or we'll miss the chance to get on the bus!"},
+      {expression:"find a seat", meaning:"achar um lugar para sentar", example:"He doesn't always find a seat.", collocations:["find a seat easily","find an empty seat","find a seat by the window"], usage:"It's hard to find a seat by the window during rush hour."},
+      {expression:"check his phone", meaning:"checar o celular", example:"He listens to music or checks his phone.", collocations:["check your phone constantly","check your messages","check your email"], usage:"She checks her phone constantly, even during meals."},
+      {expression:"take (time)", meaning:"levar (tempo)", example:"The journey takes about forty minutes.", collocations:["take a long time","take an hour","take forever"], usage:"The flight to São Paulo takes about an hour."},
+    ],
+    grammar:[
+      {title:"Advérbios de frequência", exp:'Palavras como usually, often e always ficam antes do verbo principal (mas depois do verbo "be"). Indicam frequência de hábitos.', example:"He usually buys a coffee to go."},
+      {title:"Comparativo de adjetivos longos", exp:'"Longer" é o comparativo de "long". Usamos para comparar duração, tamanho, etc.', example:"The commute takes longer because of the traffic."},
+    ],
+    writingPrompt:"Escreva de 5 a 10 frases sobre o SEU trajeto até o trabalho ou escola. Compare um dia normal com um dia de chuva ou trânsito.",
+    speakingPrompt:"Grave-se lendo o texto em voz alta. Depois, tente falar sobre o seu próprio trajeto sem ler.",
+  },
+  b1: {
+    level:'b1', topic:'Um dia de trabalho', title:"A Busy Day at the Office",
+    body:"Camila has worked at the same marketing company for almost three years. She usually gets to the office around nine, checks her emails, and joins the morning meeting with her team. Yesterday, however, was different. She arrived a bit late because of an accident on the highway, so she had to rush into a meeting that had already started. During the meeting, they discussed a new project for a client, and Camila took notes so she wouldn't forget the details. After lunch, she spent most of the afternoon answering emails and preparing a presentation for Friday. By the time she left the office, she was exhausted, but she felt proud of everything she had managed to finish.",
+    questions:[
+      {q:"Why was Camila's day different from usual?", a:"She arrived late because of an accident on the highway."},
+      {q:"What did she do after lunch?", a:"She spent the afternoon answering emails and preparing a presentation."},
+      {q:"How did Camila feel at the end of the day?", a:"Exhausted, but proud of what she had finished."},
+    ],
+    chunks:[
+      {expression:"get to the office", meaning:"chegar ao escritório", example:"She usually gets to the office around nine.", collocations:["get to work on time","get to the airport early","get to a meeting late"], usage:"If there's no traffic, I can get to work on time."},
+      {expression:"join a meeting", meaning:"participar de uma reunião", example:"She joins the morning meeting with her team.", collocations:["join a call","join a team","join a conversation"], usage:"Can you join the call in five minutes?"},
+      {expression:"take notes", meaning:"fazer anotações", example:"Camila took notes so she wouldn't forget the details.", collocations:["take notes carefully","take detailed notes","take notes during a meeting"], usage:"Students who take detailed notes usually remember more."},
+      {expression:"rush into", meaning:"entrar às pressas", example:"She had to rush into a meeting that had already started.", collocations:["rush into a decision","rush into the room","rush into things"], usage:"Try not to rush into a decision you might regret later."},
+      {expression:"be proud of", meaning:"estar orgulhoso de", example:"She felt proud of everything she had managed to finish.", collocations:["be proud of your work","be proud of yourself","be proud of the team"], usage:"Her parents are very proud of her for finishing the marathon."},
+    ],
+    grammar:[
+      {title:"Present Perfect vs Simple Past", exp:'"Has worked for three years" (Present Perfect) mostra uma ação que começou no passado e continua até agora. "Arrived", "had to rush" (Simple Past) descrevem ações pontuais já finalizadas.', example:"Camila has worked at the same company for almost three years."},
+      {title:"Past Perfect", exp:"Usamos o Past Perfect (had + particípio) para uma ação que aconteceu ANTES de outra ação passada.", example:"A meeting that had already started."},
+    ],
+    writingPrompt:"Escreva de 5 a 10 frases contando como foi o SEU último dia de trabalho ou estudo, incluindo algo que saiu diferente do planejado.",
+    speakingPrompt:"Leia seu texto em voz alta algumas vezes e depois tente contar seu dia de trabalho naturalmente, sem ler.",
+  },
+  b2: {
+    level:'b2', topic:'Compras no mercado', title:"Sunday Grocery Run",
+    body:"Every Sunday morning, before the supermarket gets too crowded, Rafael makes a quick list of everything the house needs for the week. He used to just wander around the aisles without any plan, but he soon realized that shopping without a list made him buy things he didn't actually need — and skip the ones he did. Nowadays, he sticks to his list as closely as possible, although he still allows himself the occasional treat, like a new type of cheese he hasn't tried before. While he shops, he compares prices between brands and checks the expiration dates carefully, especially for dairy products. By the time he reaches the checkout, the store is usually packed with people who left their shopping until the last minute. Once he's home, he puts everything away and, if he has any energy left, starts planning what to cook for dinner.",
+    questions:[
+      {q:"What mistake did Rafael use to make when shopping without a list?", a:"He bought things he didn't need and skipped things he did."},
+      {q:"Besides following his list, what does he do while shopping?", a:"He compares prices between brands and checks expiration dates."},
+      {q:"What does Rafael sometimes do even though he has a list?", a:"He allows himself an occasional treat."},
+    ],
+    chunks:[
+      {expression:"make a list", meaning:"fazer uma lista", example:"Rafael makes a quick list of everything the house needs.", collocations:["make a shopping list","make a mental list","make a list of priorities"], usage:"Before traveling, I always make a list of priorities."},
+      {expression:"stick to", meaning:"seguir à risca, se ater a", example:"He sticks to his list as closely as possible.", collocations:["stick to a budget","stick to a plan","stick to a diet"], usage:"It's hard to stick to a diet during the holidays."},
+      {expression:"compare prices", meaning:"comparar preços", example:"He compares prices between brands.", collocations:["compare prices online","compare prices between stores","compare prices carefully"], usage:"It's a good idea to compare prices online before buying electronics."},
+      {expression:"check the expiration date", meaning:"checar a data de validade", example:"He checks the expiration dates carefully.", collocations:["check the expiration date twice","check the label","check for freshness"], usage:"Always check the label before eating something from the back of the fridge."},
+      {expression:"leave (something) until the last minute", meaning:"deixar para a última hora", example:"People who left their shopping until the last minute.", collocations:["leave your homework until the last minute","leave it until the last minute","leave packing until the last minute"], usage:"He always leaves his homework until the last minute and then panics."},
+    ],
+    grammar:[
+      {title:'"used to" para hábitos do passado', exp:'"Used to + verbo" descreve um hábito ou estado que era verdade no passado, mas não é mais.', example:"He used to just wander around the aisles without any plan."},
+      {title:'"although" para concessão', exp:'"Although" introduz uma ideia que contrasta com a frase principal, similar a "embora" em português.', example:"Although he still allows himself the occasional treat."},
+    ],
+    writingPrompt:'Escreva de 5 a 10 frases sobre como você faz (ou deveria fazer) compras de mercado. Use "used to" para comparar como você fazia antes.',
+    speakingPrompt:"Grave-se lendo o texto. Depois, fale por 1 minuto sobre a sua própria rotina de compras, sem ler.",
+  },
+  c1: {
+    level:'c1', topic:'Preparando o jantar', title:"Cooking Without a Recipe",
+    body:"After years of religiously following recipes down to the last gram, Beatriz has gradually learned to trust her instincts in the kitchen. It all started one evening when she realized she was missing half the ingredients for the dish she had planned, and rather than giving up, she decided to improvise with whatever she had on hand. To her surprise, the result turned out even better than the original recipe would have. Since then, cooking dinner has become less of a chore and more of a creative outlet. She still consults recipes occasionally, mostly for inspiration or to get the proportions right for baking, which she admits is far less forgiving than sautéing vegetables or throwing together a stew. What she enjoys most, though, is tasting as she goes, adjusting the seasoning bit by bit until the flavors feel balanced. Her partner jokes that dinner is never quite the same dish twice, but he's not complaining — if anything, he looks forward to whatever unexpected combination she comes up with next.",
+    questions:[
+      {q:"What changed Beatriz's approach to cooking?", a:"An evening when she was missing ingredients and had to improvise."},
+      {q:"Why does she still use recipes for baking specifically?", a:"Baking is less forgiving and needs precise proportions."},
+      {q:"How does her partner react to her unpredictable cooking?", a:"He jokes about it but looks forward to it — he isn't complaining."},
+    ],
+    chunks:[
+      {expression:"trust your instincts", meaning:"confiar no seu instinto", example:"Beatriz has gradually learned to trust her instincts in the kitchen.", collocations:["trust your instincts in the kitchen","trust your gut","trust your own judgment"], usage:"In a job interview, it often pays to trust your gut."},
+      {expression:"have on hand", meaning:"ter à mão/disponível", example:"She decided to improvise with whatever she had on hand.", collocations:["whatever you have on hand","keep ingredients on hand","have cash on hand"], usage:"It's useful to keep extra batteries on hand during a storm."},
+      {expression:"a creative outlet", meaning:"uma válvula de escape criativa", example:"Cooking has become less of a chore and more of a creative outlet.", collocations:["find a creative outlet","cooking as a creative outlet","a healthy outlet for stress"], usage:"After a stressful week, painting became her creative outlet."},
+      {expression:"get the proportions right", meaning:"acertar as proporções", example:"She consults recipes to get the proportions right for baking.", collocations:["get the balance right","get the timing right","get the seasoning right"], usage:"Baking a cake requires getting the proportions right."},
+      {expression:"taste as you go", meaning:"provar enquanto cozinha", example:"What she enjoys most is tasting as she goes.", collocations:["adjust the seasoning as you go","taste and adjust","season to taste"], usage:"Good cooks always taste and adjust the seasoning as they go."},
+    ],
+    grammar:[
+      {title:"Present Perfect para mudança gradual", exp:'"Has gradually learned" mostra uma mudança que aconteceu aos poucos até o presente, diferente do Simple Past usado para eventos pontuais ("realized", "decided").', example:"Beatriz has gradually learned to trust her instincts."},
+      {title:'"would have" hipotético', exp:"Usado para especular sobre um resultado alternativo no passado — o que teria acontecido se algo diferente tivesse ocorrido.", example:"The result turned out even better than the original recipe would have."},
+      {title:"Oração reduzida com particípio", exp:'"Adjusting the seasoning bit by bit" é uma oração reduzida (-ing) que substitui "while she adjusts", tornando a frase mais fluida.', example:"Tasting as she goes, adjusting the seasoning bit by bit."},
+    ],
+    writingPrompt:"Escreva de 5 a 10 frases sobre a SUA relação com a cozinha (ou outra atividade do dia a dia): você segue regras à risca ou improvisa? O que mudou com o tempo?",
+    speakingPrompt:"Grave-se lendo o texto com atenção à entonação. Depois, fale por 1-2 minutos sobre como sua própria rotina mudou ao longo do tempo.",
+  },
+  c2: {
+    level:'c2', topic:'Planos de fim de semana', title:"Renegotiating the Weekend",
+    body:"For most of her adult life, Fernanda treated the weekend as an extension of the working week in disguise — errands piled up on Saturday morning, emails she'd promised herself she wouldn't open crept back in by Sunday afternoon, and by the time Monday arrived, she felt as though she'd barely had a break at all. It wasn't until a particularly exhausting month that she decided something had to give, so she began, almost experimentally, to ring-fence a few hours each weekend that were simply off-limits to anything resembling obligation. At first, the guilt was almost unbearable; she'd catch herself reaching for her laptop out of sheer habit, only to remember, somewhat sheepishly, that she'd sworn off checking it until Monday. Over time, though, the discomfort gave way to something closer to relief, and she found herself looking forward to those protected hours the way she once looked forward to a long-awaited holiday. These days, her weekends still include the inevitable chores — nobody, after all, is exempt from laundry — but she's learned to draw a firmer line between what genuinely needs doing and what she'd simply convinced herself was urgent. Her friends have noticed the difference too, joking that she's finally become someone who can sit still without reaching for her phone every five minutes.",
+    questions:[
+      {q:"What prompted Fernanda to change how she spent her weekends?", a:"A particularly exhausting month made her realize something had to change."},
+      {q:"How does she describe her early attempts to protect her weekend time?", a:"The guilt was almost unbearable; she'd catch herself reaching for her laptop out of habit."},
+      {q:"What has stayed the same about her weekends, even after the change?", a:"The inevitable chores, like laundry, are still there."},
+    ],
+    chunks:[
+      {expression:"an extension of", meaning:"uma extensão de", example:"She treated the weekend as an extension of the working week.", collocations:["an extension of the working week","an extension of her personality","a natural extension of"], usage:"For many remote workers, the home office became an extension of the living room."},
+      {expression:"ring-fence", meaning:"reservar/proteger (tempo ou recursos)", example:"She began to ring-fence a few hours each weekend.", collocations:["ring-fence some time","ring-fence a budget","ring-fence resources"], usage:"The company decided to ring-fence part of its budget for emergencies."},
+      {expression:"give way to", meaning:"dar lugar a", example:"The discomfort gave way to something closer to relief.", collocations:["give way to relief","give way to panic","guilt gave way to acceptance"], usage:"Her initial anger eventually gave way to acceptance."},
+      {expression:"out of habit", meaning:"por hábito, automaticamente", example:"She'd catch herself reaching for her laptop out of sheer habit.", collocations:["reach for something out of habit","do it out of habit","say it out of sheer habit"], usage:"He locked the door out of habit, even though no one else lived there."},
+      {expression:"draw a line between", meaning:"traçar um limite entre", example:"She's learned to draw a firmer line between what genuinely needs doing and what doesn't.", collocations:["draw a line between work and life","draw a firmer line","draw the line somewhere"], usage:"It's important to draw a line between constructive criticism and personal attacks."},
+    ],
+    grammar:[
+      {title:"Past Perfect em discurso relatado", exp:'"She\'d promised herself she wouldn\'t open" combina Past Perfect com um pensamento relatado, comum para expressar intenções passadas não cumpridas.', example:"Emails she'd promised herself she wouldn't open."},
+      {title:'Estrutura enfática "It wasn\'t until... that"', exp:'Essa estrutura de ênfase (cleft sentence) destaca QUANDO algo aconteceu, equivalente a "só foi... que" em português.', example:"It wasn't until a particularly exhausting month that she decided something had to give."},
+      {title:"Orações participiais", exp:'"Joking that she\'s finally become someone who..." é uma oração reduzida com -ing que acrescenta informação sem precisar de outra oração completa.', example:"Her friends have noticed the difference too, joking that she's finally become someone who can sit still."},
+    ],
+    writingPrompt:"Escreva de 5 a 10 frases refletindo sobre como VOCÊ costuma (ou deveria) separar tempo de descanso da rotina de obrigações. O que você tem feito diferente ultimamente?",
+    speakingPrompt:"Grave-se lendo o texto com atenção especial ao ritmo de frases longas. Depois, fale de forma natural por 1-2 minutos sobre sua própria relação com o descanso.",
+  },
+};
+
+function sentencesOf(text){
+  return text.replace(/\n/g," ").split(/[.!?]/).map(s=>s.trim()).filter(Boolean);
+}
+// Finds the longest contiguous run of the expression's words that actually
+// appears in the sentence (tolerating simple inflection like get→gets,
+// leave→leaves via a trailing \w*), and blanks that span. Real chunk
+// examples often insert other words between parts of a phrasal expression
+// ("draw a firmer line between") or use an irregular verb form (give→gave),
+// so a naive whole-expression match frequently fails; shrinking the window
+// guarantees we still find and blank a meaningful, real piece of it.
+function makeCloze(sentence, expression){
+  const cleaned = expression.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+  const words = cleaned.split(' ').filter(Boolean);
+  for (let len = words.length; len >= 1; len--) {
+    for (let start = 0; start + len <= words.length; start++) {
+      const slice = words.slice(start, start + len);
+      const pattern = slice.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\w*').join('\\s+');
+      const re = new RegExp('\\b' + pattern, 'i');
+      const m = sentence.match(re);
+      if (m) {
+        return sentence.slice(0, m.index) + '▁▁▁▁▁' + sentence.slice(m.index + m[0].length);
+      }
+    }
+  }
+  return sentence;
+}
+
+/* ---- content generator: local bank + optional Claude (only works when this
+   page is hosted outside a sandboxed preview that blocks cross-origin fetch) ---- */
+const ContentSource = {
+  async weeklyText(level){
+    const seed = SEED_TEXTS[level];
+    return JSON.parse(JSON.stringify(seed)); // fresh deep copy
+  },
+  async collocations(expression, level){
+    const key = getApiKey();
+    if(!key) throw new Error('missing-key');
+    const prompt = `Give 3 natural English collocations (word combinations) using the expression "${expression}", suitable for a CEFR ${level.toUpperCase()} English learner. Respond with ONLY valid JSON: {"collocations": ["...", "...", "..."]}`;
+    const text = await callClaude(prompt, 300);
+    return JSON.parse(text).collocations || [];
+  },
+  async writingFeedback(userText, originalText, level){
+    const key = getApiKey();
+    if(!key) throw new Error('missing-key');
+    const prompt = `A CEFR ${level.toUpperCase()} Brazilian English learner adapted the following text to their own life:\n\nORIGINAL TEXT:\n${originalText}\n\nLEARNER'S TEXT:\n${userText}\n\nCorrect the learner's text minimally (fix real errors only, keep their voice and level), and explain briefly, in Portuguese, WHY each meaningful correction was made. Respond with ONLY valid JSON: {"correctedText": "...", "notesPT": ["...", "..."]}`;
+    const text = await callClaude(prompt, 1200);
+    return JSON.parse(text);
+  }
+};
+async function callClaude(prompt, maxTokens){
+  const key = getApiKey();
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{
+      'content-type':'application/json',
+      'x-api-key':key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true',
+    },
+    body: JSON.stringify({ model:'claude-sonnet-5', max_tokens:maxTokens, messages:[{role:'user', content:prompt}] })
+  });
+  if(!res.ok) throw new Error('http-'+res.status);
+  const data = await res.json();
+  let text = (data.content||[]).find(b=>b.type==='text')?.text || '';
+  text = text.trim();
+  if(text.startsWith('```')){ text = text.split('\n').slice(1).join('\n'); if(text.endsWith('```')) text = text.slice(0,-3); }
+  return text.trim();
+}
+
+/* ============================== SPACED REPETITION ============================== */
+function scheduleCard(card, grade){
+  if(grade==='again'){
+    card.lapses = (card.lapses||0)+1;
+    card.repetitions = 0;
+    card.intervalDays = 1;
+    card.easeFactor = Math.max(1.3, card.easeFactor - 0.2);
+  } else if(grade==='good'){
+    card.repetitions += 1;
+    if(card.repetitions===1) card.intervalDays = 1;
+    else if(card.repetitions===2) card.intervalDays = 6;
+    else card.intervalDays = Math.max(1, Math.round(card.intervalDays * card.easeFactor));
+  } else if(grade==='easy'){
+    card.repetitions += 1;
+    card.easeFactor += 0.15;
+    if(card.repetitions<=2) card.intervalDays = 4;
+    else card.intervalDays = Math.max(1, Math.round(card.intervalDays * card.easeFactor * 1.3));
+  }
+  const due = new Date();
+  due.setDate(due.getDate() + card.intervalDays);
+  card.dueDate = due.toISOString();
+}
+
+/* ============================== STATE ============================== */
+const STORAGE_KEY = 'onetext_progress_v1';
+function defaultState(){
+  return {
+    level:null, hasOnboarded:false, xpTotal:0, currentStreak:0, longestStreak:0,
+    lastActiveDate:null, currentWeek:null, completedWeeks:[], reviewCards:[], apiKey:null,
+  };
+}
+let S = loadState();
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return Object.assign(defaultState(), JSON.parse(raw));
+  }catch(e){}
+  return defaultState();
+}
+function save(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); }catch(e){} }
+function getApiKey(){ return S.apiKey || null; }
+
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function daysBetween(a,b){ return Math.round((new Date(b)-new Date(a))/86400000); }
+
+function registerActivityToday(){
+  const today = todayStr();
+  if(!S.lastActiveDate){ S.currentStreak = 1; }
+  else{
+    const d = daysBetween(S.lastActiveDate, today);
+    if(d===0){ /* already active */ }
+    else if(d===1){ S.currentStreak += 1; }
+    else { S.currentStreak = 1; }
+  }
+  S.lastActiveDate = today;
+  S.longestStreak = Math.max(S.longestStreak, S.currentStreak);
+}
+function evaluateStreakDecay(){
+  if(!S.lastActiveDate) return;
+  const d = daysBetween(S.lastActiveDate, todayStr());
+  if(d>1){ S.currentStreak = 0; save(); }
+}
+
+function weekIsComplete(week){ return week && week.completedDays.length===STUDY_DAYS.length; }
+function weekProgress(week){ return week ? week.completedDays.length/STUDY_DAYS.length : 0; }
+
+function enqueueReviewCards(week){
+  const existing = new Set(S.reviewCards.map(c=>c.sourceTitle+'|'+c.expression));
+  week.weeklyText.chunks.forEach(chunk=>{
+    const key = week.weeklyText.title+'|'+chunk.expression;
+    if(existing.has(key)) return;
+    S.reviewCards.push({
+      id: crypto.randomUUID(), expression: chunk.expression, meaning: chunk.meaning,
+      cloze: makeCloze(chunk.example, chunk.expression), collocations: chunk.collocations,
+      usage: chunk.usage, sourceTitle: week.weeklyText.title, sourceLevel: week.weeklyText.level,
+      dueDate: new Date().toISOString(), intervalDays:0, easeFactor:2.5, repetitions:0, lapses:0,
+    });
+  });
+}
+function dueReviewCards(limit=20){
+  const now = new Date();
+  return S.reviewCards.filter(c=>new Date(c.dueDate)<=now).sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate)).slice(0,limit);
+}
+function dueReviewCount(){ return S.reviewCards.filter(c=>new Date(c.dueDate)<=new Date()).length; }
+
+function completeDay(dayId){
+  const week = S.currentWeek;
+  if(!week) return;
+  const already = week.completedDays.includes(dayId);
+  if(!already){
+    week.completedDays.push(dayId);
+    S.xpTotal += dayInfo(dayId).xp;
+    registerActivityToday();
+    if(dayId==='monday') enqueueReviewCards(week);
+  }
+  // Note: the completed week is kept as currentWeek (not archived yet) so the
+  // "week complete" banner can show on Home; it moves to completedWeeks only
+  // when the learner starts the next week (see startNewWeek).
+  if(weekIsComplete(week) && !week.completedAt) week.completedAt = new Date().toISOString();
+  save();
+}
+function usedTitles(){
+  return S.completedWeeks.map(w=>w.weeklyText.title).concat(S.currentWeek?[S.currentWeek.weeklyText.title]:[]);
+}
+async function startNewWeek(){
+  if(S.currentWeek && weekIsComplete(S.currentWeek)){
+    S.completedWeeks.push(S.currentWeek);
+  }
+  const text = await ContentSource.weeklyText(S.level);
+  S.currentWeek = { weeklyText:text, completedDays:[], writingSubmission:'', writingFeedback:null, sundayRecall:'', startedAt:new Date().toISOString(), completedAt:null };
+  save();
+}
+function gradeReviewCard(id, grade){
+  const card = S.reviewCards.find(c=>c.id===id);
+  if(!card) return;
+  scheduleCard(card, grade);
+  S.xpTotal += 5;
+  registerActivityToday();
+  save();
+}
+
+/* ============================== APP / ROUTER STATE ============================== */
+const V = { tab:'home', pushedDay:null, modal:null, reviewCardsSession:null, reviewIndex:0, reviewRevealed:false };
+
+const root = document.getElementById('app');
+function render(){
+  if(!S.hasOnboarded){ root.innerHTML = viewOnboarding(); bindOnboarding(); return; }
+  root.innerHTML = viewShell();
+  bindShell();
+  if(V.modal==='settings'){ mountOverlay(viewSettings()); bindSettings(); }
+  else if(V.modal==='levelChange'){ mountOverlay(viewLevelChange()); bindLevelChange(); }
+  else if(V.modal==='review-session'){ mountOverlay(viewReviewSession()); bindReviewSession(); }
+  else { document.querySelectorAll('#app-shell > .overlay').forEach(el => el.remove()); }
+}
+function mountOverlay(html){
+  const shell = document.getElementById('app-shell');
+  shell.querySelectorAll('.overlay').forEach(el => el.remove());
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  shell.appendChild(div.firstElementChild);
+}
+function closeModal(){ V.modal=null; render(); }
+
+/* ============================== ONBOARDING ============================== */
+function viewOnboarding(){
+  return `
+  <div style="display:flex;flex-direction:column;height:100%;">
+    <div class="main-scroll">
+      <div class="onb-hero">
+        ${icon('book')}
+        <h1>OneText</h1>
+        <p>Um único texto por semana. Sete dias, todas as habilidades. Qual é o seu nível de inglês?</p>
+      </div>
+      <div class="level-grid">
+        ${CEFR_LEVELS.map(l=>`
+          <button class="level-card" data-action="onboard" data-level="${l.id}">
+            <span class="code">${l.code}</span>
+            <span class="name">${esc(l.name)}</span>
+            <span class="desc">${esc(l.desc)}</span>
+          </button>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+function bindOnboarding(){
+  root.querySelectorAll('[data-action="onboard"]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      S.level = btn.dataset.level;
+      S.hasOnboarded = true;
+      save();
+      render();
+    });
+  });
+}
+
+/* ============================== SHELL (tab bar + top bar) ============================== */
+function viewShell(){
+  const lvl = levelInfo(S.level);
+  return `
+    <div class="topbar">
+      <button class="topbar-btn" data-action="open-level">${icon('circle')} ${lvl?lvl.code:''}</button>
+      <span class="brand">OneText</span>
+      <button class="topbar-btn icon-only" data-action="open-settings">${icon('gear')}</button>
+    </div>
+    <div class="main-scroll" id="tab-content"></div>
+    <div class="tabbar">
+      <button class="tab-btn ${V.tab==='home'&&!V.pushedDay?'active':''}" data-action="tab-home">${icon('book')}<span>Semana</span></button>
+      <button class="tab-btn ${V.tab==='review'?'active':''}" data-action="tab-review">
+        ${icon('layers')}<span>Revisão</span>
+        ${dueReviewCount()>0?`<span class="tab-badge">${dueReviewCount()}</span>`:''}
+      </button>
+    </div>
+  `;
+}
+function bindShell(){
+  document.querySelector('[data-action="open-level"]').addEventListener('click', ()=>{ V.modal='levelChange'; render(); });
+  document.querySelector('[data-action="open-settings"]').addEventListener('click', ()=>{ V.modal='settings'; render(); });
+  document.querySelector('[data-action="tab-home"]').addEventListener('click', ()=>{ V.tab='home'; V.pushedDay=null; render(); });
+  document.querySelector('[data-action="tab-review"]').addEventListener('click', ()=>{ V.tab='review'; V.pushedDay=null; render(); });
+
+  const content = document.getElementById('tab-content');
+  if(V.tab==='home'){
+    if(V.pushedDay){ content.innerHTML = viewDay(V.pushedDay); bindDay(V.pushedDay); }
+    else { content.innerHTML = viewHome(); bindHome(); }
+  } else {
+    content.innerHTML = viewReview();
+    bindReview();
+  }
+}
+
+/* ============================== HOME TAB ============================== */
+function viewHome(){
+  const week = S.currentWeek;
+  let body;
+  if(week){
+    const nextDay = STUDY_DAYS.find(d=>!week.completedDays.includes(d.id));
+    body = `
+      <div class="week-card">
+        <div class="week-topic">${esc(week.weeklyText.topic)}</div>
+        <div class="week-title">${esc(week.weeklyText.title)}</div>
+        <div class="progress-track"><div class="progress-fill" style="width:${weekProgress(week)*100}%"></div></div>
+        <div class="week-sub">${week.completedDays.length} de 7 dias concluídos</div>
+      </div>
+      <div class="day-list">
+        ${STUDY_DAYS.map(d=>{
+          const done = week.completedDays.includes(d.id);
+          const next = nextDay && nextDay.id===d.id;
+          return `
+          <button class="day-row ${done?'done':''} ${next?'next':''}" data-action="open-day" data-day="${d.id}">
+            <div class="day-badge">${icon(done?'check':d.icon)}</div>
+            <div class="day-text">
+              <div class="t">${d.short} · ${esc(d.title)}</div>
+              <div class="s">${esc(d.subtitle)}</div>
+            </div>
+            ${done?`<div class="day-xp">+${d.xp} XP</div>`:icon('chevronRight','chev')}
+          </button>`;
+        }).join('')}
+      </div>
+      ${weekIsComplete(week)?`
+        <div class="banner">
+          <h2 style="font-size:17px">🎉 Semana concluída!</h2>
+          <p>Você completou os 7 dias com este texto. Bora para o próximo?</p>
+          <button class="btn primary" data-action="new-week">${icon('zap')} Novo texto da semana</button>
+        </div>`:''}
+    `;
+  } else {
+    body = `
+      <div class="empty-state">
+        ${icon('zap')}
+        <h2>Pronto para começar a semana?</h2>
+        <button class="btn primary" data-action="new-week" style="margin-top:6px">${icon('zap')} Gerar texto da semana</button>
+      </div>`;
+  }
+  return `<div class="pad">${body}</div>`;
+}
+function bindHome(){
+  root.querySelectorAll('[data-action="open-day"]').forEach(b=>b.addEventListener('click', ()=>{ V.pushedDay=b.dataset.day; V.dayState={}; render(); }));
+  const nb = root.querySelector('[data-action="new-week"]');
+  if(nb) nb.addEventListener('click', async ()=>{ nb.disabled=true; nb.textContent='Gerando…'; await startNewWeek(); render(); });
+}
+
+/* ============================== DAY SCREENS ============================== */
+V.dayState = {}; // ephemeral per-visit UI state (checkboxes, playback, etc.)
+
+function dayHeaderHtml(dayId){
+  const d = dayInfo(dayId);
+  const lvl = levelInfo(S.level);
+  return `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:2px;">
+      <button class="topbar-btn icon-only" data-action="back-home">${icon('arrowLeft')}</button>
+      <div class="day-header" style="flex:1;">
+        <div class="day-badge" style="width:38px;height:38px;">${icon(d.icon)}</div>
+        <div>
+          <h2>${esc(d.title)}</h2>
+          <div class="s">${esc(d.subtitle)}</div>
+        </div>
+        <span class="level-pill">${lvl.code}</span>
+      </div>
+    </div>`;
+}
+function footerCta(dayId, enabled, label){
+  const done = S.currentWeek.completedDays.includes(dayId);
+  return `<div class="footer-cta">
+    <button class="btn ${done?'ghost':'primary'}" data-action="complete-day" data-day="${dayId}" ${(!enabled&&!done)?'disabled':''}>
+      ${done?icon('check'):''} ${done?'Concluído':(label||('Concluir dia (+'+dayInfo(dayId).xp+' XP)'))}
+    </button>
+  </div>`;
+}
+function bindBackAndComplete(dayId){
+  document.querySelector('[data-action="back-home"]').addEventListener('click', ()=>{ V.pushedDay=null; render(); });
+  const btn = document.querySelector('[data-action="complete-day"]');
+  const alreadyDone = S.currentWeek.completedDays.includes(dayId);
+  if(btn && !alreadyDone){
+    btn.addEventListener('click', ()=>{
+      completeDay(dayId);
+      render();
+      setTimeout(()=>{ if(V.pushedDay===dayId){ V.pushedDay=null; render(); } }, 550);
+    });
+  }
+}
+
+function viewDay(dayId){
+  const text = S.currentWeek.weeklyText;
+  if(dayId==='monday') return viewMonday(text);
+  if(dayId==='tuesday') return viewTuesday(text);
+  if(dayId==='wednesday') return viewWednesday(text);
+  if(dayId==='thursday') return viewThursday(text);
+  if(dayId==='friday') return viewFriday(text);
+  if(dayId==='saturday') return viewSaturday(text);
+  if(dayId==='sunday') return viewSunday(text);
+}
+function bindDay(dayId){
+  if(dayId==='monday') return bindMonday();
+  if(dayId==='tuesday') return bindTuesday();
+  if(dayId==='wednesday') return bindWednesday();
+  if(dayId==='thursday') return bindThursday();
+  if(dayId==='friday') return bindFriday();
+  if(dayId==='saturday') return bindSaturday();
+  if(dayId==='sunday') return bindSunday();
+}
+
+/* ---- Monday ---- */
+function viewMonday(text){
+  V.dayState.reviewedChunks = V.dayState.reviewedChunks || new Set();
+  const done = S.currentWeek.completedDays.includes('monday');
+  return `<div class="pad">
+    ${dayHeaderHtml('monday')}
+    <div class="card outline">
+      <h2 style="font-size:17px;margin-bottom:8px;">${esc(text.title)}</h2>
+      <div class="body-text">${esc(text.body)}</div>
+    </div>
+    <div class="section-label">Perguntas de interpretação</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${text.questions.map((q,i)=>`
+        <div class="qa-card">
+          <div class="qa-q">${esc(q.q)}</div>
+          <div class="qa-a" data-hidden-answer="${i}" style="display:none;">${esc(q.a)}</div>
+          <button class="link-btn" data-action="reveal-answer" data-i="${i}" style="margin-top:5px;">Ver resposta</button>
+        </div>`).join('')}
+    </div>
+    <div class="section-label">5 chunks novos e úteis</div>
+    <p class="hint">Marque como revisado cada expressão depois de entender o significado no contexto.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${text.chunks.map((c,i)=>`
+        <button class="chunk-row" data-action="toggle-chunk" data-i="${i}">
+          <span class="chunk-check ${done?'on':''}" data-chunk-check="${i}">${icon('check')}</span>
+          <span>
+            <div class="chunk-expr">${esc(c.expression)}</div>
+            <div class="chunk-mean">${esc(c.meaning)}</div>
+            <div class="chunk-ex">"${esc(c.example)}"</div>
+          </span>
+        </button>`).join('')}
+    </div>
+  </div>
+  ${footerCta('monday', done)}`;
+}
+function bindMonday(){
+  bindBackAndComplete('monday');
+  root.querySelectorAll('[data-action="reveal-answer"]').forEach(btn=>btn.addEventListener('click', ()=>{
+    const el = root.querySelector(`[data-hidden-answer="${btn.dataset.i}"]`);
+    el.style.display='block'; btn.style.display='none';
+  }));
+  const done = S.currentWeek.completedDays.includes('monday');
+  const set = V.dayState.reviewedChunks;
+  function refreshBtn(){
+    const btn = root.querySelector('[data-action="complete-day"]');
+    if(btn && !done) btn.disabled = set.size < S.currentWeek.weeklyText.chunks.length;
+  }
+  refreshBtn();
+  root.querySelectorAll('[data-action="toggle-chunk"]').forEach(row=>row.addEventListener('click', ()=>{
+    const i = row.dataset.i;
+    if(set.has(i)) set.delete(i); else set.add(i);
+    root.querySelector(`[data-chunk-check="${i}"]`).classList.toggle('on');
+    refreshBtn();
+  }));
+}
+
+/* ---- Tuesday ---- */
+function viewTuesday(text){
+  V.dayState.reviewedChunks = V.dayState.reviewedChunks || new Set();
+  const done = S.currentWeek.completedDays.includes('tuesday');
+  return `<div class="pad">
+    ${dayHeaderHtml('tuesday')}
+    <p class="hint">Para cada chunk, veja com quais outras palavras ele combina naturalmente em inglês (collocations), e um contexto de aplicação novo. Marque como revisado quando entender os exemplos.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${text.chunks.map((c,i)=>`
+        <div class="colloc-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="chunk-expr">${esc(c.expression)}</span>
+            <button data-action="toggle-chunk" data-i="${i}" class="chunk-check ${done?'on':''}" data-chunk-check="${i}">${icon('check')}</button>
+          </div>
+          <div class="colloc-list" data-colloc-list="${i}">
+            ${c.collocations.map(x=>`<div class="colloc-item">• ${esc(x)}</div>`).join('')}
+          </div>
+          <div class="usage-box">
+            <div class="usage-label">CONTEXTO DE APLICAÇÃO</div>
+            <div class="usage-text">${esc(c.usage)}</div>
+          </div>
+          <button class="link-btn" data-action="more-colloc" data-i="${i}">✨ Gerar mais collocations</button>
+        </div>`).join('')}
+    </div>
+  </div>
+  ${footerCta('tuesday', done)}`;
+}
+function bindTuesday(){
+  bindBackAndComplete('tuesday');
+  const done = S.currentWeek.completedDays.includes('tuesday');
+  const set = V.dayState.reviewedChunks;
+  function refreshBtn(){
+    const btn = root.querySelector('[data-action="complete-day"]');
+    if(btn && !done) btn.disabled = set.size < S.currentWeek.weeklyText.chunks.length;
+  }
+  refreshBtn();
+  root.querySelectorAll('[data-action="toggle-chunk"]').forEach(row=>row.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const i = row.dataset.i;
+    if(set.has(i)) set.delete(i); else set.add(i);
+    row.classList.toggle('on');
+    refreshBtn();
+  }));
+  root.querySelectorAll('[data-action="more-colloc"]').forEach(btn=>btn.addEventListener('click', async ()=>{
+    const i = btn.dataset.i;
+    const chunk = S.currentWeek.weeklyText.chunks[i];
+    btn.textContent = 'Gerando…';
+    try{
+      const more = await ContentSource.collocations(chunk.expression, S.level);
+      const list = root.querySelector(`[data-colloc-list="${i}"]`);
+      more.forEach(m=>{ if(!chunk.collocations.includes(m)){ chunk.collocations.push(m); list.insertAdjacentHTML('beforeend', `<div class="colloc-item">• ${esc(m)}</div>`); } });
+      btn.textContent = '✨ Gerar mais collocations';
+    }catch(err){
+      btn.textContent = 'Configure uma chave de IA em Ajustes';
+      setTimeout(()=>{ btn.textContent = '✨ Gerar mais collocations'; }, 2200);
+    }
+  }));
+}
+
+/* ---- Wednesday ---- */
+function viewWednesday(text){
+  V.dayState.practiced = V.dayState.practiced || new Set();
+  const done = S.currentWeek.completedDays.includes('wednesday');
+  const sentences = sentencesOf(text.body);
+  return `<div class="pad">
+    ${dayHeaderHtml('wednesday')}
+    <p class="hint">Ouça frase por frase, sem olhar o texto se conseguir. Pause, repita em voz alta imitando o ritmo e a entonação (Shadowing).</p>
+    <div class="toggle-row">
+      <span style="font-weight:700;font-size:13.5px;">🐢 Velocidade reduzida</span>
+      <button class="switch ${V.dayState.slow!==false?'on':''}" data-action="toggle-slow"></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${sentences.map((s,i)=>`
+        <div class="sentence-row">
+          <button class="play-btn" data-action="play-sentence" data-i="${i}">${icon('play')}</button>
+          <div class="sentence-text">${esc(s)}.</div>
+          <span data-practiced="${i}" style="color:var(--success);${V.dayState.practiced.has(String(i))?'':'display:none;'}">${icon('check')}</span>
+        </div>`).join('')}
+    </div>
+  </div>
+  ${footerCta('wednesday', done)}`;
+}
+function bindWednesday(){
+  bindBackAndComplete('wednesday');
+  V.dayState.slow = V.dayState.slow!==false;
+  document.querySelector('[data-action="toggle-slow"]').addEventListener('click', (e)=>{
+    V.dayState.slow = !V.dayState.slow; e.currentTarget.classList.toggle('on');
+  });
+  const sentences = sentencesOf(S.currentWeek.weeklyText.body);
+  const done = S.currentWeek.completedDays.includes('wednesday');
+  const set = V.dayState.practiced;
+  function refreshBtn(){
+    const btn = root.querySelector('[data-action="complete-day"]');
+    if(btn && !done) btn.disabled = set.size < sentences.length;
+  }
+  refreshBtn();
+  root.querySelectorAll('[data-action="play-sentence"]').forEach(btn=>btn.addEventListener('click', ()=>{
+    const i = btn.dataset.i;
+    if('speechSynthesis' in window){
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(sentences[i]);
+      u.lang = 'en-US';
+      u.rate = V.dayState.slow ? 0.72 : 0.95;
+      speechSynthesis.speak(u);
+    }
+    set.add(i);
+    root.querySelector(`[data-practiced="${i}"]`).style.display='inline';
+    refreshBtn();
+  }));
+}
+
+/* ---- Thursday ---- */
+function viewThursday(text){
+  V.dayState.reviewedGrammar = V.dayState.reviewedGrammar || new Set();
+  const done = S.currentWeek.completedDays.includes('thursday');
+  return `<div class="pad">
+    ${dayHeaderHtml('thursday')}
+    <p class="hint">Veja os pontos gramaticais escondidos no texto da semana, com explicação simples e exemplo real.</p>
+    <div class="card outline" id="reread-box" style="cursor:pointer;">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><b style="font-size:13.5px;">Reler o texto</b><span id="reread-chev">${icon('chevronRight')}</span></div>
+      <div class="body-text" id="reread-body" style="display:none;margin-top:8px;">${esc(text.body)}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${text.grammar.map((g,i)=>`
+        <button class="grammar-card" data-action="toggle-grammar" data-i="${i}">
+          <div class="grammar-title">${esc(g.title)} <span data-gcheck="${i}">${icon(done?'check':'circle')}</span></div>
+          <div class="grammar-exp">${esc(g.exp)}</div>
+          <div class="grammar-ex">"${esc(g.example)}"</div>
+        </button>`).join('')}
+    </div>
+  </div>
+  ${footerCta('thursday', done)}`;
+}
+function bindThursday(){
+  bindBackAndComplete('thursday');
+  document.getElementById('reread-box').addEventListener('click', ()=>{
+    const b = document.getElementById('reread-body');
+    b.style.display = b.style.display==='none' ? 'block' : 'none';
+  });
+  const done = S.currentWeek.completedDays.includes('thursday');
+  const set = V.dayState.reviewedGrammar;
+  function refreshBtn(){
+    const btn = root.querySelector('[data-action="complete-day"]');
+    if(btn && !done) btn.disabled = set.size < S.currentWeek.weeklyText.grammar.length;
+  }
+  refreshBtn();
+  root.querySelectorAll('[data-action="toggle-grammar"]').forEach(row=>row.addEventListener('click', ()=>{
+    const i = row.dataset.i;
+    if(set.has(i)) set.delete(i); else set.add(i);
+    row.querySelector(`[data-gcheck="${i}"]`).innerHTML = icon(set.has(i)?'check':'circle');
+    refreshBtn();
+  }));
+}
+
+/* ---- Friday ---- */
+function viewFriday(text){
+  const done = S.currentWeek.completedDays.includes('friday');
+  const fb = S.currentWeek.writingFeedback;
+  return `<div class="pad">
+    ${dayHeaderHtml('friday')}
+    <div class="card outline"><p style="font-size:13.5px;">${esc(text.writingPrompt)}</p></div>
+    <textarea id="writing-input" placeholder="Escreva aqui…">${esc(S.currentWeek.writingSubmission||'')}</textarea>
+    <button class="btn ghost block-sm" style="width:auto;align-self:flex-start;" data-action="ai-correct">✨ Corrigir com IA</button>
+    <div id="fb-error" class="warn-text" style="display:none;">Configure uma chave de IA em Ajustes para correção automática — você já pode concluir o dia mesmo assim.</div>
+    <div id="fb-box" class="card outline" style="${fb?'':'display:none;'}">
+      <b style="font-size:14px;">Texto corrigido</b>
+      <p style="font-size:13.5px;margin-top:6px;" id="fb-text">${fb?esc(fb.correctedText):''}</p>
+      <div id="fb-notes">${fb&&fb.notesPT?fb.notesPT.map(n=>`<div style="font-size:12px;color:var(--ink-muted);margin-top:4px;">• ${esc(n)}</div>`).join(''):''}</div>
+    </div>
+  </div>
+  ${footerCta('friday', (S.currentWeek.writingSubmission||'').trim().length>0)}`;
+}
+function bindFriday(){
+  bindBackAndComplete('friday');
+  const ta = document.getElementById('writing-input');
+  const btn = root.querySelector('[data-action="complete-day"]');
+  const done = S.currentWeek.completedDays.includes('friday');
+  ta.addEventListener('input', ()=>{
+    S.currentWeek.writingSubmission = ta.value; save();
+    if(btn && !done) btn.disabled = ta.value.trim().length===0;
+  });
+  document.querySelector('[data-action="ai-correct"]').addEventListener('click', async (e)=>{
+    const text = S.currentWeek.weeklyText;
+    e.target.textContent = 'Corrigindo…';
+    try{
+      const fb = await ContentSource.writingFeedback(ta.value, text.body, S.level);
+      S.currentWeek.writingFeedback = fb; save();
+      document.getElementById('fb-error').style.display='none';
+      const box = document.getElementById('fb-box');
+      box.style.display='block';
+      document.getElementById('fb-text').textContent = fb.correctedText;
+      document.getElementById('fb-notes').innerHTML = (fb.notesPT||[]).map(n=>`<div style="font-size:12px;color:var(--ink-muted);margin-top:4px;">• ${esc(n)}</div>`).join('');
+    }catch(err){
+      document.getElementById('fb-error').style.display='block';
+    }
+    e.target.textContent = '✨ Corrigir com IA';
+  });
+}
+
+/* ---- Saturday ---- */
+let mediaRecorder=null, recordedChunksArr=[], recordedUrl=null, mediaStream=null;
+function viewSaturday(text){
+  const done = S.currentWeek.completedDays.includes('saturday');
+  return `<div class="pad">
+    ${dayHeaderHtml('saturday')}
+    <div class="card outline"><p style="font-size:13.5px;">${esc(text.speakingPrompt)}</p></div>
+    <div style="font-size:13px;color:var(--ink-muted);display:flex;flex-direction:column;gap:4px;">
+      <div>• Leia o texto (ou o que você escreveu na sexta) em voz alta, algumas vezes.</div>
+      <div>• Grave-se e ouça sua pronúncia, ritmo e entonação.</div>
+      <div>• Depois, tente falar sobre o assunto de forma natural, sem ler.</div>
+    </div>
+    <div class="card outline" style="gap:12px;display:flex;flex-direction:column;">
+      <button class="btn tint-red" data-action="rec-toggle">${icon('mic')} <span id="rec-label">Gravar minha fala</span></button>
+      <audio id="rec-player" controls style="width:100%;${recordedUrl?'':'display:none;'}" src="${recordedUrl||''}"></audio>
+      <div id="rec-error" class="warn-text" style="display:none;">Permissão de microfone negada. Você ainda pode marcar abaixo que praticou.</div>
+      <div class="toggle-row">
+        <span style="font-size:12.5px;font-weight:700;">Pratiquei falando em voz alta</span>
+        <button class="switch ${V.dayState.practicedSpeaking?'on':''}" data-action="toggle-practiced"></button>
+      </div>
+    </div>
+  </div>
+  ${footerCta('saturday', !!recordedUrl || !!V.dayState.practicedSpeaking)}`;
+}
+function bindSaturday(){
+  bindBackAndComplete('saturday');
+  const done = S.currentWeek.completedDays.includes('saturday');
+  function refreshBtn(){
+    const btn = root.querySelector('[data-action="complete-day"]');
+    if(btn && !done) btn.disabled = !(recordedUrl || V.dayState.practicedSpeaking);
+  }
+  document.querySelector('[data-action="toggle-practiced"]').addEventListener('click', (e)=>{
+    V.dayState.practicedSpeaking = !V.dayState.practicedSpeaking;
+    e.currentTarget.classList.toggle('on');
+    refreshBtn();
+  });
+  document.querySelector('[data-action="rec-toggle"]').addEventListener('click', async (e)=>{
+    const label = document.getElementById('rec-label');
+    if(mediaRecorder && mediaRecorder.state==='recording'){
+      mediaRecorder.stop();
+      label.textContent = 'Gravar minha fala';
+      return;
+    }
+    try{
+      mediaStream = await navigator.mediaDevices.getUserMedia({audio:true});
+      recordedChunksArr = [];
+      mediaRecorder = new MediaRecorder(mediaStream);
+      mediaRecorder.ondataavailable = ev => recordedChunksArr.push(ev.data);
+      mediaRecorder.onstop = ()=>{
+        const blob = new Blob(recordedChunksArr, {type:'audio/webm'});
+        recordedUrl = URL.createObjectURL(blob);
+        const player = document.getElementById('rec-player');
+        player.src = recordedUrl; player.style.display='block';
+        mediaStream.getTracks().forEach(t=>t.stop());
+        refreshBtn();
+      };
+      mediaRecorder.start();
+      label.textContent = 'Parar gravação';
+    }catch(err){
+      document.getElementById('rec-error').style.display='block';
+    }
+  });
+  refreshBtn();
+}
+
+/* ---- Sunday ---- */
+function viewSunday(text){
+  const done = S.currentWeek.completedDays.includes('sunday');
+  return `<div class="pad">
+    ${dayHeaderHtml('sunday')}
+    <div class="card outline"><p style="font-size:13.5px;">Feche o material e tente se lembrar das estruturas, verbos e expressões que você estudou esta semana. Se quiser, reescreva o texto de memória.</p></div>
+    <p class="hint">Reescreva o texto de memória (opcional, mas recomendado):</p>
+    <textarea id="recall-input" placeholder="Escreva de memória…">${esc(S.currentWeek.sundayRecall||'')}</textarea>
+    <div class="card outline" id="compare-box" style="cursor:pointer;">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><b style="font-size:13.5px;">Comparar com o texto original</b><span id="compare-chev">${icon('chevronRight')}</span></div>
+      <div class="body-text" id="compare-body" style="display:none;margin-top:8px;">${esc(text.body)}</div>
+    </div>
+    <div class="card outline">
+      <b style="font-size:13.5px;">Antes de concluir, tente lembrar:</b>
+      <div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;">
+        ${text.chunks.map(c=>`<div style="font-size:12.5px;">• ${esc(c.expression)}</div>`).join('')}
+      </div>
+    </div>
+  </div>
+  ${footerCta('sunday', true)}`;
+}
+function bindSunday(){
+  bindBackAndComplete('sunday');
+  document.getElementById('compare-box').addEventListener('click', ()=>{
+    const b = document.getElementById('compare-body');
+    b.style.display = b.style.display==='none' ? 'block' : 'none';
+  });
+  document.getElementById('recall-input').addEventListener('input', (e)=>{
+    S.currentWeek.sundayRecall = e.target.value; save();
+  });
+}
+
+/* ============================== REVIEW TAB ============================== */
+function viewReview(){
+  const total = S.reviewCards.length;
+  const due = dueReviewCount();
+  if(total===0){
+    return `<div class="pad">
+      <div class="empty-state">
+        ${icon('layers')}
+        <h2>Ainda não há cartões de revisão</h2>
+        <p>Assim que você concluir a missão de Segunda-feira de uma semana, os 5 chunks dela viram cartões aqui — e ficam disponíveis mesmo depois que você já estiver em outra semana.</p>
+      </div>
+    </div>`;
+  }
+  const groups = {};
+  S.reviewCards.forEach(c=>{ (groups[c.sourceTitle] = groups[c.sourceTitle]||{level:c.sourceLevel,count:0}).count++; });
+  return `<div class="pad">
+    <div class="card" style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;">
+      ${icon('layers')}
+      <div style="font-size:42px;font-weight:800;font-family:var(--font-display);">${due}</div>
+      <div style="font-size:13px;color:var(--ink-muted);font-weight:700;">${due===1?'cartão para revisar agora':'cartões para revisar agora'}</div>
+      <div style="font-size:11.5px;color:var(--ink-faint);">${total} no total, de todas as semanas já estudadas</div>
+      <button class="btn primary" data-action="start-review" ${due===0?'disabled':''}>${icon('play')} Iniciar revisão (+5 XP por cartão)</button>
+      ${due===0?`<p class="hint">Tudo revisado por agora. Volte mais tarde — os cartões reaparecem conforme o intervalo de repetição espaçada.</p>`:''}
+    </div>
+    <div class="section-label">Textos no seu banco de revisão</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${Object.entries(groups).map(([title,g])=>`
+        <div class="card outline" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>
+            <div style="font-size:13.5px;font-weight:700;">${esc(title)}</div>
+            <div style="font-size:11.5px;color:var(--ink-muted);">${levelInfo(g.level).code}</div>
+          </span>
+          <span style="font-size:11.5px;color:var(--ink-muted);">${g.count} chunks</span>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+function bindReview(){
+  const btn = root.querySelector('[data-action="start-review"]');
+  if(btn) btn.addEventListener('click', ()=>{
+    V.reviewCardsSession = dueReviewCards(20);
+    V.reviewIndex = 0; V.reviewRevealed = false;
+    V.modal = 'review-session';
+    render();
+  });
+}
+
+/* ---- review session (fullscreen overlay) ---- */
+function viewReviewSession(){
+  const cards = V.reviewCardsSession||[];
+  if(V.reviewIndex >= cards.length){
+    return `<div class="overlay">
+      <div class="overlay-header"><span class="overlay-title">Revisão</span><button class="topbar-btn icon-only" data-action="close-overlay">${icon('x')}</button></div>
+      <div class="overlay-body">
+        <div class="empty-state">
+          ${icon('star')}
+          <h2>Revisão concluída!</h2>
+          <p>Você revisou ${cards.length} cart${cards.length===1?'ão':'ões'} e ganhou +${cards.length*5} XP.</p>
+          <button class="btn primary" data-action="close-overlay" style="margin-top:6px;">Concluir</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  const card = cards[V.reviewIndex];
+  return `<div class="overlay">
+    <div class="overlay-header"><span class="overlay-title">Revisão</span><button class="topbar-btn icon-only" data-action="close-overlay">${icon('x')}</button></div>
+    <div class="overlay-body">
+      <div class="rs-progress">
+        <div class="progress-track"><div class="progress-fill" style="width:${(V.reviewIndex/cards.length)*100}%"></div></div>
+        <div class="rs-count">${V.reviewIndex+1} de ${cards.length}</div>
+      </div>
+      <div class="pad" style="padding-top:8px;">
+        <div class="card outline">
+          <div class="rs-source"><span>${esc(card.sourceTitle)}</span><span>${levelInfo(card.sourceLevel).code}</span></div>
+          <div class="rs-cloze">${esc(card.cloze)}</div>
+          ${V.reviewRevealed?`
+            <div class="rs-answer">
+              <div><div class="rs-expr">${esc(card.expression)}</div><div class="rs-mean">${esc(card.meaning)}</div></div>
+              <div>
+                <div class="section-label" style="margin-bottom:5px;">Collocations</div>
+                ${card.collocations.map(c=>`<div class="colloc-item">• ${esc(c)}</div>`).join('')}
+              </div>
+              <div class="usage-box"><div class="usage-label">Contexto de aplicação</div><div class="usage-text">${esc(card.usage)}</div></div>
+            </div>`:''}
+        </div>
+      </div>
+    </div>
+    ${V.reviewRevealed ? `
+      <div class="grade-row">
+        <button class="grade-btn" style="background:var(--danger);" data-action="grade" data-g="again">Não lembrei</button>
+        <button class="grade-btn" style="background:var(--primary);" data-action="grade" data-g="good">Bom</button>
+        <button class="grade-btn" style="background:var(--success);" data-action="grade" data-g="easy">Fácil</button>
+      </div>` : `
+      <div class="footer-cta"><button class="btn primary" data-action="reveal">Mostrar resposta</button></div>`
+    }
+  </div>`;
+}
+function bindReviewSession(){
+  document.querySelectorAll('[data-action="close-overlay"]').forEach(b=>b.addEventListener('click', ()=>{ V.modal=null; render(); }));
+  const revealBtn = document.querySelector('[data-action="reveal"]');
+  if(revealBtn) revealBtn.addEventListener('click', ()=>{ V.reviewRevealed = true; render(); });
+  document.querySelectorAll('[data-action="grade"]').forEach(b=>b.addEventListener('click', ()=>{
+    const cards = V.reviewCardsSession;
+    gradeReviewCard(cards[V.reviewIndex].id, b.dataset.g);
+    V.reviewIndex += 1; V.reviewRevealed = false;
+    render();
+  }));
+}
+
+/* ============================== SETTINGS / LEVEL CHANGE ============================== */
+function viewSettings(){
+  return `<div class="overlay">
+    <div class="overlay-header"><span class="overlay-title">Ajustes</span><button class="topbar-btn icon-only" data-action="close-overlay">${icon('x')}</button></div>
+    <div class="overlay-body">
+      <div style="padding:16px 18px;">
+        <div style="font-size:20px;font-weight:800;font-family:var(--font-display);">${levelInfo(S.level).code}</div>
+        <div style="color:var(--ink-muted);font-size:13px;">${esc(levelInfo(S.level).name)}</div>
+      </div>
+      <div class="section-label" style="padding:0 18px;">Chave de API da Anthropic (opcional)</div>
+      <div style="padding:10px 18px;display:flex;flex-direction:column;gap:8px;">
+        <input type="password" id="api-key-input" placeholder="sk-ant-..." value="${esc(S.apiKey||'')}">
+        <button class="btn primary block-sm" style="width:auto;align-self:flex-start;" data-action="save-key">Salvar chave</button>
+        <p class="hint">Ativa geração de textos por IA, mais collocations e correção de escrita. Fica salva só neste navegador (localStorage) — não é tão seguro quanto o Keychain do app nativo, use uma chave pessoal de teste.</p>
+        <p class="warn-text">Nota: dentro da pré-visualização do Claude, chamadas de rede a serviços externos são bloqueadas por segurança — a IA só funciona quando esta página está hospedada fora daqui (ex.: GitHub Pages, Vercel). Offline, o app funciona 100% com os textos já incluídos.</p>
+      </div>
+      <div class="settings-row"><span>Sequência atual</span><span class="v">${S.currentStreak} dia${S.currentStreak===1?'':'s'}</span></div>
+      <div class="settings-row"><span>Maior sequência</span><span class="v">${S.longestStreak} dia${S.longestStreak===1?'':'s'}</span></div>
+      <div class="settings-row"><span>XP total</span><span class="v">${S.xpTotal}</span></div>
+      <div class="settings-row" style="border-bottom:none;"><span>Semanas concluídas</span><span class="v">${S.completedWeeks.length}</span></div>
+    </div>
+  </div>`;
+}
+function bindSettings(){
+  document.querySelectorAll('[data-action="close-overlay"]').forEach(b=>b.addEventListener('click', closeModal));
+  document.querySelector('[data-action="save-key"]').addEventListener('click', ()=>{
+    S.apiKey = document.getElementById('api-key-input').value.trim() || null;
+    save();
+    const b = document.querySelector('[data-action="save-key"]');
+    b.textContent = 'Salvo!'; setTimeout(()=>b.textContent='Salvar chave', 1200);
+  });
+}
+function viewLevelChange(){
+  return `<div class="overlay">
+    <div class="overlay-header"><span class="overlay-title">Alterar nível</span><button class="topbar-btn icon-only" data-action="close-overlay">${icon('x')}</button></div>
+    <div class="overlay-body">
+      <div class="level-grid">
+        ${CEFR_LEVELS.map(l=>`
+          <button class="level-card" data-action="pick-level" data-level="${l.id}" style="${l.id===S.level?'outline:2px solid var(--primary);':''}">
+            <span class="code">${l.code}</span><span class="name">${esc(l.name)}</span><span class="desc">${esc(l.desc)}</span>
+          </button>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+function bindLevelChange(){
+  document.querySelectorAll('[data-action="close-overlay"]').forEach(b=>b.addEventListener('click', closeModal));
+  document.querySelectorAll('[data-action="pick-level"]').forEach(b=>b.addEventListener('click', ()=>{
+    S.level = b.dataset.level; save(); closeModal();
+  }));
+}
+
+/* ============================== BOOT ============================== */
+evaluateStreakDecay();
+render();
+</script>
+</body>
+</html>
