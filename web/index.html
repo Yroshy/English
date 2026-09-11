@@ -87,7 +87,14 @@
   }
 
   *{box-sizing:border-box;}
-  html,body{height:100%;}
+  /* min-height (not height) on purpose: this page is often embedded inside a
+     host viewer (e.g. an artifact preview) whose available height the host
+     controls, not us. A fixed height + overflow:hidden there risks clipping
+     content below the fold with no way to scroll to it. min-height lets the
+     shell grow to fit whatever it actually contains, so nothing is ever
+     trapped — the page scrolls normally, and the tab bar stays pinned via
+     position:sticky instead of a height-constrained flex layout. */
+  html,body{min-height:100%;}
   body{
     margin:0;
     background:var(--ground);
@@ -96,25 +103,24 @@
     -webkit-font-smoothing:antialiased;
     display:flex;
     justify-content:center;
-    overscroll-behavior-y:none;
   }
   #app-shell{
     width:100%;
     max-width:480px;
-    height:100dvh;
+    min-height:100dvh;
     background:var(--surface);
     display:flex;
     flex-direction:column;
     position:relative;
-    overflow:hidden;
   }
   @media (min-width:640px){
-    body{ align-items:center; padding-block:28px; }
+    body{ align-items:flex-start; padding-block:28px; }
     #app-shell{
-      height:min(860px,94dvh);
+      min-height:min(860px,94dvh);
       border-radius:32px;
       box-shadow:var(--shadow-md), 0 0 0 10px var(--surface-2);
       border:1px solid var(--border);
+      overflow:hidden;
     }
   }
 
@@ -139,13 +145,17 @@
   .brand{ font-family:var(--font-display); font-weight:700; font-size:19px; letter-spacing:-0.01em; }
 
   /* ---------- scroll area ---------- */
-  .main-scroll{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:8px; }
+  .main-scroll{ padding-bottom:8px; }
   .pad{ padding:6px 18px 28px; display:flex; flex-direction:column; gap:18px; }
 
   /* ---------- tab bar ---------- */
+  /* margin-top:auto pins it to the bottom of the shell when content is
+     short; position:sticky keeps it visible while scrolling past taller
+     content — together they cover both cases without ever clipping. */
   .tabbar{
     flex-shrink:0; display:flex; border-top:1px solid var(--border);
     background:var(--surface); padding-bottom:env(safe-area-inset-bottom);
+    margin-top:auto; position:sticky; bottom:0; z-index:5;
   }
   .tab-btn{
     flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
@@ -240,16 +250,23 @@
   .body-text{ font-family:var(--font-serif); font-size:16.5px; line-height:1.6; }
   .tap-word{ cursor:pointer; border-bottom:1px dotted var(--ink-faint); -webkit-tap-highlight-color:transparent; }
   .tap-word:active, .tap-word.picked{ background:var(--accent-soft); border-bottom-color:var(--accent); border-radius:3px; }
-  .listen-row{ display:flex; align-items:center; gap:10px; }
+  .listen-row{ display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
   .listen-btn{
     display:flex; align-items:center; gap:6px; background:var(--primary-soft); color:var(--primary);
     border:none; border-radius:999px; padding:7px 13px; font-size:12.5px; font-weight:800; cursor:pointer; flex-shrink:0;
   }
   .listen-btn.active{ background:var(--accent); color:#fff; }
   .listen-btn .icon{ width:14px; height:14px; }
-  .word-pop-backdrop{ position:absolute; inset:0; z-index:30; background:rgba(0,0,0,.15); }
+  /* position:fixed (viewport-relative, not shell-relative): the shell's
+     height now grows with its content, so an absolutely-positioned overlay
+     would be sized/placed against that (possibly much taller, scrolled-away)
+     box instead of what's actually on screen. Fixed positioning — plus
+     centering to match the shell's own column — keeps these correctly
+     placed regardless of scroll position or content length. */
+  .word-pop-backdrop{ position:fixed; inset:0; z-index:30; background:rgba(0,0,0,.15); }
   .word-pop{
-    position:absolute; left:14px; right:14px; bottom:calc(14px + env(safe-area-inset-bottom));
+    position:fixed; left:50%; transform:translateX(-50%);
+    width:calc(100% - 28px); max-width:452px;
     background:var(--surface); border-radius:var(--radius-md); box-shadow:var(--shadow-md);
     border:1px solid var(--border); padding:14px; z-index:31;
   }
@@ -326,8 +343,13 @@
   .level-card .desc{ font-size:11px; color:var(--ink-muted); line-height:1.4; margin-top:2px; }
 
   /* ---------- modal overlay ---------- */
+  /* Fixed (viewport-relative) for the same reason as .word-pop above: the
+     shell's height is content-driven now, so absolute+inset:0 against it
+     could open scrolled out of view. */
   .overlay{
-    position:absolute; inset:0; background:var(--surface); z-index:20;
+    position:fixed; top:0; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:480px;
+    background:var(--surface); z-index:20;
     display:flex; flex-direction:column;
   }
   .overlay-header{
@@ -698,6 +720,11 @@ function renderTappableText(body){
   return out;
 }
 
+function listenCountHint(count){
+  count = count || 0;
+  if (count === 0) return 'Toque em qualquer palavra para ver o significado.';
+  return `Você já ouviu o texto ${count} ${count === 1 ? 'vez' : 'vezes'}. Toque em qualquer palavra para ver o significado.`;
+}
 function sentencesOf(text){
   return text.replace(/\n/g," ").split(/[.!?]/).map(s=>s.trim()).filter(Boolean);
 }
@@ -876,7 +903,7 @@ async function startNewWeek(){
     S.completedWeeks.push(S.currentWeek);
   }
   const text = await ContentSource.weeklyText(S.level);
-  S.currentWeek = { weeklyText:text, completedDays:[], writingSubmission:'', writingFeedback:null, sundayRecall:'', startedAt:new Date().toISOString(), completedAt:null };
+  S.currentWeek = { weeklyText:text, completedDays:[], writingSubmission:'', writingFeedback:null, sundayRecall:'', listenCount:0, startedAt:new Date().toISOString(), completedAt:null };
   save();
 }
 function gradeReviewCard(id, grade){
@@ -1018,27 +1045,27 @@ function showWordPopover(word, anchorEl){
   shell.appendChild(pop);
 
   // Anchor the popover right next to the tapped word instead of always
-  // pinning it to the bottom of the screen, flipping above the word (and
-  // clamping inside the shell) whenever there isn't room below.
-  const shellRect = shell.getBoundingClientRect();
-  const shellHeight = shell.clientHeight;
+  // pinning it to the bottom of the screen, flipping above the word
+  // (and clamping to the visible viewport) whenever there isn't room below.
+  // Both .word-pop and the anchor word are positioned relative to the
+  // viewport (fixed / getBoundingClientRect), so this works regardless of
+  // the shell's own (content-driven) height or current scroll position.
+  const viewportHeight = window.innerHeight;
   const popHeight = pop.offsetHeight;
   let top;
   if (anchorEl) {
     const wr = anchorEl.getBoundingClientRect();
-    const relTop = wr.top - shellRect.top;
-    const relBottom = wr.bottom - shellRect.top;
-    const spaceBelow = shellHeight - relBottom;
-    const spaceAbove = relTop;
+    const spaceBelow = viewportHeight - wr.bottom;
+    const spaceAbove = wr.top;
     if (spaceBelow >= popHeight + 16) {
-      top = relBottom + 10;
+      top = wr.bottom + 10;
     } else if (spaceAbove >= popHeight + 16) {
-      top = relTop - popHeight - 10;
+      top = wr.top - popHeight - 10;
     } else {
-      top = Math.max(10, Math.min(shellHeight - popHeight - 10, relBottom + 10));
+      top = Math.max(10, Math.min(viewportHeight - popHeight - 10, wr.bottom + 10));
     }
   } else {
-    top = shellHeight - popHeight - 14;
+    top = viewportHeight - popHeight - 14;
   }
   pop.style.top = top + 'px';
   pop.style.bottom = 'auto';
@@ -1052,12 +1079,45 @@ function showWordPopover(word, anchorEl){
 function hideWordPopover(){
   document.querySelectorAll('.word-pop, .word-pop-backdrop').forEach(el => el.remove());
 }
+/* ---- Voice selection: prefer a male English voice ---- */
+// The Web Speech API has no gender field on SpeechSynthesisVoice, so this
+// matches against the well-known male voice names shipped by major
+// platforms (iOS/macOS, Android/Chrome, Windows/Edge). Voices often load
+// asynchronously, so we cache the list and refresh it on 'voiceschanged'.
+let cachedVoices = [];
+function refreshVoices(){
+  if ('speechSynthesis' in window) cachedVoices = speechSynthesis.getVoices();
+}
+if ('speechSynthesis' in window) {
+  refreshVoices();
+  speechSynthesis.onvoiceschanged = refreshVoices;
+}
+const MALE_VOICE_NAMES = [
+  'daniel','fred','alex','aaron','arthur','oliver','gordon','george','ryan','guy',
+  'david','mark','tom','eric','james','thomas','rishi','male','man'
+];
+function pickEnglishVoice(){
+  if (!cachedVoices.length) refreshVoices();
+  const english = cachedVoices.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+  // Whole-word match, not substring — "Samantha" must not match "man", nor
+  // "Alexandra" match "alex".
+  const male = english.find(v => {
+    const words = v.name.toLowerCase().split(/[^a-z]+/);
+    return words.some(w => MALE_VOICE_NAMES.includes(w));
+  });
+  return male || english.find(v => v.lang.toLowerCase() === 'en-us') || english[0] || null;
+}
+function applyVoice(utterance, rate){
+  const voice = pickEnglishVoice();
+  if (voice) utterance.voice = voice;
+  utterance.lang = 'en-US';
+  utterance.rate = rate;
+}
 function speakText(text, rate){
   if (!('speechSynthesis' in window)) return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'en-US';
-  u.rate = rate || 0.9;
+  applyVoice(u, rate || 0.9);
   speechSynthesis.speak(u);
 }
 
@@ -1072,8 +1132,7 @@ function playFullText(sentences, onStateChange, onError){
   function next(){
     if (!fullPlaybackActive || i >= sentences.length) { fullPlaybackActive = false; onStateChange(false); return; }
     const u = new SpeechSynthesisUtterance(sentences[i] + '.');
-    u.lang = 'en-US';
-    u.rate = 0.92;
+    applyVoice(u, 0.92);
     u.onend = () => { i += 1; next(); };
     u.onerror = () => { fullPlaybackActive = false; onStateChange(false); onError && onError(); };
     speechSynthesis.speak(u);
@@ -1206,7 +1265,7 @@ function viewMonday(text){
     <div class="card outline">
       <div class="listen-row" style="margin-bottom:10px;">
         <button class="listen-btn" data-action="toggle-listen-full">${icon('headphones')}<span id="listen-full-label">Ouvir o texto</span></button>
-        <span class="hint" style="flex:1;">Toque em qualquer palavra para ver o significado.</span>
+        <span class="hint" id="listen-count-label">${listenCountHint(S.currentWeek.listenCount)}</span>
       </div>
       <h2 style="font-size:17px;margin-bottom:8px;">${esc(text.title)}</h2>
       <div class="body-text">${renderTappableText(text.body)}</div>
@@ -1263,6 +1322,10 @@ function bindMonday(){
       listenBtn.classList.remove('active');
       document.getElementById('listen-full-label').textContent = 'Ouvir o texto';
     } else {
+      S.currentWeek.listenCount = (S.currentWeek.listenCount || 0) + 1;
+      save();
+      const countLabel = document.getElementById('listen-count-label');
+      if (countLabel) countLabel.textContent = listenCountHint(S.currentWeek.listenCount);
       const sentences = sentencesOf(S.currentWeek.weeklyText.body);
       playFullText(sentences, (playing) => {
         const btn = document.querySelector('[data-action="toggle-listen-full"]');
@@ -1379,8 +1442,7 @@ function bindWednesday(){
     if('speechSynthesis' in window){
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(sentences[i]);
-      u.lang = 'en-US';
-      u.rate = V.dayState.slow ? 0.72 : 0.95;
+      applyVoice(u, V.dayState.slow ? 0.72 : 0.95);
       speechSynthesis.speak(u);
     }
     set.add(i);
