@@ -266,10 +266,12 @@
      as "this whole thing is one expression", not a run of loose words. */
   .tap-chunk{ cursor:pointer; background:var(--primary-soft); color:var(--primary); border-radius:4px; padding:0 2px; -webkit-tap-highlight-color:transparent; }
   .tap-chunk:active{ background:var(--accent-soft); color:var(--accent); }
-  /* Semi-transparent bar that tracks the sentence currently being read by
-     "Ouvir o texto" — box-decoration-break isn't set, so on a wrapped
-     sentence it paints one bar per line, like a highlighter. */
-  .read-sentence.reading-active{ background:var(--reading-highlight); border-radius:3px; transition:background .2s ease; }
+  /* Per-word highlight that tracks "Ouvir o texto" playback in real time
+     (driven by the utterance's word-boundary events, with an estimated
+     fallback where the engine never fires them) — this is the visible
+     highlight during playback. .read-sentence itself carries no background;
+     it only anchors scroll-into-view so the active line stays on screen. */
+  .read-word.reading-active{ background:var(--reading-highlight); border-radius:3px; transition:background .12s ease; }
   .listen-row{ display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
   .listen-btn{
     display:flex; align-items:center; gap:6px; background:var(--primary-soft); color:var(--primary);
@@ -859,15 +861,40 @@ function findSentenceRanges(body){
 }
 
 // Wraps plain words individually (tap → dictionary gloss); a chunk span is
-// wrapped whole with NO word-level spans inside it, so a tap anywhere in
-// the phrase always shows the full expression, never an isolated word.
-function renderWordsInline(segment){
+// wrapped whole for tapping (so a tap anywhere in the phrase always shows
+// the full expression, never an isolated word), but its own words are ALSO
+// wrapped (read-only, see renderReadWordsInline) purely so playback can
+// highlight them one at a time. Every word span also carries data-off — its
+// character offset relative to the enclosing sentence's start — so the
+// "Ouvir o texto" playback can map a spoken word straight to its span; base
+// is that word's absolute offset in `body`, sentStart is the sentence's.
+function renderWordsInline(segment, base, sentStart){
   const re = /[A-Za-zÀ-ÿ']+/g;
   let out = '', last = 0, m;
   while ((m = re.exec(segment))) {
     out += esc(segment.slice(last, m.index));
     const word = m[0];
-    out += `<span class="tap-word" data-w="${esc(word.toLowerCase())}">${esc(word)}</span>`;
+    const off = base + m.index - sentStart;
+    out += `<span class="tap-word read-word" data-w="${esc(word.toLowerCase())}" data-off="${off}" data-len="${word.length}">${esc(word)}</span>`;
+    last = m.index + word.length;
+  }
+  out += esc(segment.slice(last));
+  return out;
+}
+// Same word-splitting as renderWordsInline, but for text INSIDE a chunk
+// span: no .tap-word class (a tap must bubble up to the chunk's own click
+// handler and show the full phrase, not a lone word's gloss) and no click
+// handler of its own — these spans exist only so playback highlighting can
+// land on individual words within a chunk instead of lighting up the whole
+// chunk chip at once.
+function renderReadWordsInline(segment, base, sentStart){
+  const re = /[A-Za-zÀ-ÿ']+/g;
+  let out = '', last = 0, m;
+  while ((m = re.exec(segment))) {
+    out += esc(segment.slice(last, m.index));
+    const word = m[0];
+    const off = base + m.index - sentStart;
+    out += `<span class="read-word" data-off="${off}" data-len="${word.length}">${esc(word)}</span>`;
     last = m.index + word.length;
   }
   out += esc(segment.slice(last));
@@ -883,11 +910,11 @@ function renderTappableText(body, chunks){
     out += `<span class="read-sentence" data-sent-idx="${sr.idx}">`;
     let innerCursor = sr.start;
     chunkSpans.filter(cs => cs.start >= sr.start && cs.end <= sr.end).forEach(cs => {
-      out += renderWordsInline(body.slice(innerCursor, cs.start));
-      out += `<span class="tap-chunk" data-chunk-i="${cs.chunkIndex}">${esc(body.slice(cs.start, cs.end))}</span>`;
+      out += renderWordsInline(body.slice(innerCursor, cs.start), innerCursor, sr.start);
+      out += `<span class="tap-chunk" data-chunk-i="${cs.chunkIndex}">${renderReadWordsInline(body.slice(cs.start, cs.end), cs.start, sr.start)}</span>`;
       innerCursor = cs.end;
     });
-    out += renderWordsInline(body.slice(innerCursor, sr.end));
+    out += renderWordsInline(body.slice(innerCursor, sr.end), innerCursor, sr.start);
     out += '</span>';
     cursor = sr.end;
   });
@@ -1340,19 +1367,54 @@ function speakText(text, rate){
 /* Plays every sentence of a text back-to-back (vs. Wednesday's one-at-a-time
    shadowing practice) — a plain "listen to the whole thing" control. */
 let fullPlaybackActive = false;
-function playFullText(sentences, onStateChange, onError, onSentenceChange){
+function playFullText(sentences, onStateChange, onError, onSentenceChange, onWordBoundary){
   stopFullText();
   if (!('speechSynthesis' in window)) { onError && onError(); return; }
   fullPlaybackActive = true;
   let i = 0;
   function next(){
-    if (!fullPlaybackActive || i >= sentences.length) { fullPlaybackActive = false; onStateChange(false); onSentenceChange && onSentenceChange(-1); return; }
+    if (!fullPlaybackActive || i >= sentences.length) { fullPlaybackActive = false; onStateChange(false); onSentenceChange && onSentenceChange(-1); onWordBoundary && onWordBoundary(-1, -1); return; }
     onSentenceChange && onSentenceChange(i);
-    const u = new SpeechSynthesisUtterance(sentences[i] + '.');
+    const sentText = sentences[i] + '.';
+    const u = new SpeechSynthesisUtterance(sentText);
     applyVoice(u, 0.92);
     trackListening(u);
-    u.onend = () => { i += 1; next(); };
-    u.onerror = () => { fullPlaybackActive = false; onStateChange(false); onSentenceChange && onSentenceChange(-1); onError && onError(); };
+
+    // Word-level highlight: the 'boundary' event gives the real spoken
+    // position, so prefer it. Some engines (notably certain iOS Safari
+    // webview contexts) never fire it at all — there we fall back to an
+    // estimated word-by-word advance timed from the utterance's own rate,
+    // so the highlight still roughly tracks the voice instead of sitting
+    // frozen on the first word for the whole sentence. The fallback backs
+    // off the instant a real boundary event shows up.
+    let boundaryFired = false;
+    const wordOffsets = [];
+    const re = /[A-Za-zÀ-ÿ']+/g;
+    let wm;
+    while ((wm = re.exec(sentText))) wordOffsets.push(wm.index);
+    let fallbackTimer = null;
+    function clearFallback(){ if (fallbackTimer) { clearInterval(fallbackTimer); fallbackTimer = null; } }
+    u.onboundary = (ev) => {
+      if (ev.name && ev.name !== 'word') return;
+      boundaryFired = true;
+      clearFallback();
+      onWordBoundary && onWordBoundary(i, ev.charIndex);
+    };
+    u.onstart = () => {
+      setTimeout(() => {
+        if (boundaryFired || !fullPlaybackActive || !wordOffsets.length) return;
+        let wi = 0;
+        onWordBoundary && onWordBoundary(i, wordOffsets[0]);
+        const stepMs = Math.max(180, 400 / (u.rate || 1));
+        fallbackTimer = setInterval(() => {
+          wi += 1;
+          if (boundaryFired || wi >= wordOffsets.length) { clearFallback(); return; }
+          onWordBoundary && onWordBoundary(i, wordOffsets[wi]);
+        }, stepMs);
+      }, 250);
+    };
+    u.onend = () => { clearFallback(); i += 1; next(); };
+    u.onerror = () => { clearFallback(); fullPlaybackActive = false; onStateChange(false); onSentenceChange && onSentenceChange(-1); onWordBoundary && onWordBoundary(-1, -1); onError && onError(); };
     speechSynthesis.speak(u);
   }
   onStateChange(true);
@@ -1567,7 +1629,7 @@ function bindMonday(){
 
   const listenBtn = document.querySelector('[data-action="toggle-listen-full"]');
   function clearSentenceHighlight(){
-    document.querySelectorAll('.read-sentence.reading-active').forEach(el => el.classList.remove('reading-active'));
+    document.querySelectorAll('.read-word.reading-active').forEach(el => el.classList.remove('reading-active'));
   }
   listenBtn.addEventListener('click', () => {
     if (fullPlaybackActive) {
@@ -1592,10 +1654,22 @@ function bindMonday(){
         if (label) label.textContent = 'Áudio indisponível neste navegador';
         clearSentenceHighlight();
       }, (idx) => {
+        // Sentence changed: nothing to paint here anymore (the highlight
+        // now lives on individual words, driven by onWordBoundary below) —
+        // just clear whatever word was lit from the previous sentence.
         clearSentenceHighlight();
-        if (idx >= 0) {
-          const el = document.querySelector(`.read-sentence[data-sent-idx="${idx}"]`);
-          if (el) { el.classList.add('reading-active'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+      }, (sentIdx, charIndex) => {
+        clearSentenceHighlight();
+        if (sentIdx < 0) return;
+        const sentEl = document.querySelector(`.read-sentence[data-sent-idx="${sentIdx}"]`);
+        if (!sentEl) return;
+        let match = null;
+        sentEl.querySelectorAll('.read-word').forEach(w => {
+          if (parseInt(w.dataset.off, 10) <= charIndex) match = w;
+        });
+        if (match) {
+          match.classList.add('reading-active');
+          match.scrollIntoView({ block: 'center', behavior: 'smooth' });
         }
       });
     }
