@@ -238,6 +238,29 @@
   }
   .section-label{ font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-muted); }
   .body-text{ font-family:var(--font-serif); font-size:16.5px; line-height:1.6; }
+  .tap-word{ cursor:pointer; border-bottom:1px dotted var(--ink-faint); -webkit-tap-highlight-color:transparent; }
+  .tap-word:active, .tap-word.picked{ background:var(--accent-soft); border-bottom-color:var(--accent); border-radius:3px; }
+  .listen-row{ display:flex; align-items:center; gap:10px; }
+  .listen-btn{
+    display:flex; align-items:center; gap:6px; background:var(--primary-soft); color:var(--primary);
+    border:none; border-radius:999px; padding:7px 13px; font-size:12.5px; font-weight:800; cursor:pointer; flex-shrink:0;
+  }
+  .listen-btn.active{ background:var(--accent); color:#fff; }
+  .listen-btn .icon{ width:14px; height:14px; }
+  .word-pop-backdrop{ position:absolute; inset:0; z-index:30; background:rgba(0,0,0,.15); }
+  .word-pop{
+    position:absolute; left:14px; right:14px; bottom:calc(14px + env(safe-area-inset-bottom));
+    background:var(--surface); border-radius:var(--radius-md); box-shadow:var(--shadow-md);
+    border:1px solid var(--border); padding:14px; z-index:31;
+  }
+  .word-pop .eyebrow{ font-size:10px; font-weight:800; letter-spacing:.05em; color:var(--accent); text-transform:uppercase; }
+  .word-pop .eyebrow.plain{ color:var(--primary); }
+  .word-pop .headword{ display:flex; align-items:center; gap:8px; margin-top:3px; }
+  .word-pop .headword b{ font-family:var(--font-display); font-size:19px; font-weight:600; }
+  .word-pop .speak-word{ background:var(--surface-2); border:none; border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
+  .word-pop .speak-word .icon{ width:14px; height:14px; }
+  .word-pop .gloss{ font-size:14px; color:var(--ink); margin-top:6px; line-height:1.5; }
+  .word-pop .extra{ font-size:12.5px; color:var(--ink-muted); margin-top:6px; }
 
   .qa-card{ background:var(--surface-2); border-radius:var(--radius-sm); padding:12px; }
   .qa-q{ font-size:13.5px; font-weight:700; }
@@ -531,6 +554,150 @@ const SEED_TEXTS = {
   },
 };
 
+/* ============================== WORD DICTIONARY ============================== */
+// Offline EN->PT gloss for every word that appears across the 6 seed texts
+// (~415 entries), so tapping any word works instantly, with no network call
+// and no API key. Proper names are marked; everything else is a short gloss
+// (not a full dictionary entry) — good enough for "what does this mean?"
+// while reading, which is what this is for.
+const WORD_DICTIONARY = {
+  "a":"um/uma","about":"sobre; aproximadamente","accident":"acidente","actually":"na verdade",
+  "adjusting":"ajustando","admits":"admite","adult":"adulto","after":"depois de","afternoon":"tarde",
+  "aisles":"corredores (de loja)","all":"todo/tudo","allows":"permite","almost":"quase","already":"já",
+  "although":"embora","always":"sempre","an":"um/uma","ana":"Ana (nome próprio)","and":"e",
+  "answering":"respondendo","any":"qualquer","anything":"qualquer coisa","apartment":"apartamento",
+  "around":"por volta de","arrived":"chegou","arrives":"chega","as":"como","at":"em, às",
+  "awaited":"esperado (long-awaited = muito esperado)","away":"embora, longe (put away = guardar)",
+  "back":"de volta","bag":"bolsa, mochila","baking":"assar (bolos, pães)","balanced":"equilibrado",
+  "barely":"mal, quase não","beatriz":"Beatriz (nome próprio)","because":"porque","become":"tornar-se",
+  "bed":"cama","before":"antes de","began":"começou","better":"melhor","between":"entre",
+  "bit":"um pouco (a bit)","brands":"marcas","break":"pausa, intervalo","brushes":"escova (os dentes)",
+  "bus":"ônibus","but":"mas","butter":"manteiga","buy":"comprar","buys":"compra",
+  "by":"por, até (by the time = até quando)","camila":"Camila (nome próprio)","can":"pode, consegue",
+  "carefully":"cuidadosamente","catch":"pegar (catch herself = se pegar fazendo algo)",
+  "center":"centro","checking":"checando","checkout":"caixa (de loja)","checks":"checa",
+  "cheese":"queijo","chore":"tarefa chata, obrigação","chores":"tarefas domésticas","city":"cidade",
+  "client":"cliente","closely":"de perto","closer":"mais perto","coffee":"café",
+  "combination":"combinação","comes":"vem","commute":"trajeto (casa-trabalho)","company":"empresa",
+  "compares":"compara","complaining":"reclamando","consults":"consulta","convinced":"convenceu, convencido",
+  "cook":"cozinhar","cooking":"cozinhando","creative":"criativo",
+  "crept":"se infiltrou (crept back = voltou aos poucos)","crowded":"lotado","crowds":"multidões",
+  "cup":"xícara","curtains":"cortinas","dairy":"laticínios","dates":"datas","day":"dia","days":"dias",
+  "decided":"decidiu","details":"detalhes","did":"fez (passado de \"do\")",
+  "didn't":"não fez/fazia (did not)","difference":"diferença","different":"diferente","dinner":"jantar",
+  "discomfort":"desconforto","discussed":"discutiram","disguise":"disfarce","dish":"prato",
+  "doesn't":"não (does not)","doing":"fazendo","down":"para baixo","draw":"traçar (draw a line = traçar um limite)",
+  "dressed":"vestido (get dressed = se vestir)","during":"durante","each":"cada","eats":"come",
+  "emails":"e-mails","energy":"energia","enjoys":"gosta de, aprecia",
+  "errands":"tarefas, afazeres (mandados)","especially":"especialmente","even":"até mesmo",
+  "evening":"noite (início da noite)","every":"todo/toda","everything":"tudo","exempt":"isento",
+  "exhausted":"exausto","exhausting":"exaustivo","experimentally":"experimentalmente",
+  "expiration":"validade (expiration date)","extension":"extensão","far":"longe; far less = muito menos",
+  "feel":"sentir","felt":"sentiu","fence":"cercar (ring-fence = reservar, proteger)",
+  "fernanda":"Fernanda (nome próprio)","few":"poucos, algumas","fifteen":"quinze","finally":"finalmente",
+  "find":"encontrar","finish":"terminar","firmer":"mais firme","first":"primeiro","five":"cinco",
+  "flavors":"sabores","following":"seguindo","for":"para, por","forget":"esquecer",
+  "forgiving":"tolerante, que perdoa erros","forty":"quarenta","forward":"à frente (look forward to = ansiar por)",
+  "found":"encontrou","friday":"sexta-feira","friends":"amigos","from":"de","gave":"deu",
+  "genuinely":"genuinamente, realmente","get":"pegar, conseguir, chegar","gets":"pega, consegue, chega",
+  "give":"dar","giving":"dando","go":"ir","goes":"vai","gradually":"gradualmente","gram":"grama (unidade)",
+  "guilt":"culpa","habit":"hábito","had":"tinha, teve","half":"metade","hand":"mão","has":"tem",
+  "hasn't":"não tem (has not)","have":"ter","he":"ele","he's":"ele é/está (he is/has)","her":"ela, dela",
+  "herself":"ela mesma","highway":"rodovia","him":"ele (objeto)","himself":"ele mesmo","his":"dele",
+  "holiday":"feriado, férias","home":"casa, lar","hours":"horas","house":"casa",
+  "however":"porém, no entanto","if":"se","improvise":"improvisar","in":"em","include":"incluir",
+  "inevitable":"inevitável","ingredients":"ingredientes","inspiration":"inspiração",
+  "instincts":"instintos","into":"para dentro de","is":"é, está","it":"isso, ele, ela (objeto neutro)",
+  "joins":"entra em, participa de","jokes":"brinca, faz piada","joking":"brincando",
+  "journey":"trajeto, jornada","just":"apenas, só","kitchen":"cozinha","laptop":"notebook, laptop",
+  "last":"último","late":"atrasado, tarde","laundry":"roupa suja, lavar roupa","learned":"aprendeu",
+  "leaves":"sai, deixa","left":"saiu, deixou; esquerda","less":"menos","life":"vida",
+  "like":"como; gostar","limits":"limites","line":"linha, limite","list":"lista","listens":"escuta",
+  "lives":"mora, vive","long":"longo","longer":"mais longo, mais tempo","looked":"olhou",
+  "looking":"olhando","looks":"olha, parece","lunch":"almoço","made":"fez","makes":"faz",
+  "managed":"conseguiu","marcos":"Marcos (nome próprio)","marketing":"marketing","meeting":"reunião",
+  "minute":"minuto","minutes":"minutos","missing":"faltando","monday":"segunda-feira","month":"mês",
+  "more":"mais","morning":"manhã","most":"a maioria, o máximo","mostly":"principalmente","music":"música",
+  "near":"perto de","need":"precisar","needs":"precisa","never":"nunca","new":"novo","next":"próximo",
+  "nine":"nove","nobody":"ninguém","not":"não","notes":"anotações","noticed":"notou",
+  "nowadays":"hoje em dia","obligation":"obrigação","occasional":"ocasional",
+  "occasionally":"ocasionalmente","of":"de","off":"fora, desligado","office":"escritório",
+  "often":"frequentemente","on":"em, sobre, ligado","once":"uma vez","one":"um/uma",
+  "ones":"os/as (the ones)","only":"apenas, só","open":"abrir","opens":"abre","or":"ou",
+  "original":"original","other":"outro","out":"fora","outlet":"válvula de escape (criativa)",
+  "over":"sobre; ao longo de","packed":"lotado, cheio; arrumou (a mala)","packs":"arruma (a bolsa)",
+  "particularly":"particularmente","partner":"parceiro(a)","people":"pessoas","phone":"telefone",
+  "piece":"pedaço","piled":"se acumulou","plan":"plano","planned":"planejou","planning":"planejando",
+  "possible":"possível","preparing":"preparando","presentation":"apresentação","prices":"preços",
+  "products":"produtos","project":"projeto","promised":"prometeu","proportions":"proporções",
+  "protected":"protegido","proud":"orgulhoso","puts":"coloca","quick":"rápido","quite":"bastante",
+  "rafael":"Rafael (nome próprio)","rainy":"chuvoso","rather":"ao invés de, prefere",
+  "reaches":"alcança, chega em","reaching":"alcançando","realized":"percebeu","recipe":"receita",
+  "recipes":"receitas","relief":"alívio","religiously":"religiosamente (à risca)","remember":"lembrar",
+  "resembling":"parecendo com","result":"resultado","right":"certo; direita",
+  "ring":"anel; ring-fence = reservar, proteger","rush":"correr, pressa","same":"mesmo",
+  "saturday":"sábado","sautéing":"refogando","seasoning":"tempero","seat":"assento","seven":"sete",
+  "she":"ela","she'd":"ela tinha, teria","she's":"ela é/está","sheepishly":"encabulado, sem graça",
+  "sheer":"puro, mero (sheer habit = puro hábito)","shopping":"compras","shops":"faz compras",
+  "shower":"banho, chuveiro","side":"lado","simply":"simplesmente","since":"desde; já que","sit":"sentar",
+  "six":"seis","skip":"pular","small":"pequeno","so":"então, tão","someone":"alguém",
+  "something":"alguma coisa","somewhat":"um tanto","soon":"logo","spent":"passou (tempo)",
+  "started":"começou","starts":"começa","station":"estação","stew":"ensopado",
+  "sticks":"segue à risca (stick to)","still":"ainda","stop":"parar","store":"loja","sunday":"domingo",
+  "supermarket":"supermercado","surprise":"surpresa","sworn":"jurou (sworn off = jurou parar de)",
+  "takes":"leva, pega","tasting":"provando","team":"equipe","teeth":"dentes","ten":"dez",
+  "than":"do que","that":"que, aquele","the":"o/a/os/as","their":"deles, delas","then":"então, depois",
+  "these":"estes, estas","they":"eles, elas","things":"coisas","thirty":"trinta","those":"aqueles, aquelas",
+  "though":"embora, porém","three":"três","throwing":"jogando (throw together = juntar rapidamente)",
+  "time":"tempo","to":"para, a","toast":"torrada","together":"juntos","too":"também, demais",
+  "took":"pegou, levou","town":"cidade (pequena)","traffic":"trânsito","train":"trem",
+  "treat":"presente, mimo, regalia","treated":"tratou","tried":"tentou","trip":"viagem, trajeto",
+  "trust":"confiar","turned":"virou, ficou","twice":"duas vezes","type":"tipo","unbearable":"insuportável",
+  "unexpected":"inesperado","until":"até","up":"para cima","urgent":"urgente",
+  "used":"usado; used to = costumava","usually":"geralmente","vegetables":"vegetais, legumes",
+  "waits":"espera","wakes":"acorda","walk":"caminhar","walks":"caminha","wander":"vagar, perambular",
+  "was":"era, estava","wasn't":"não era, estava","way":"caminho, jeito","week":"semana",
+  "weekend":"fim de semana","weekends":"fins de semana","were":"eram, estavam","what":"o que",
+  "whatever":"o que quer que seja","when":"quando","which":"qual, que","while":"enquanto","who":"quem",
+  "with":"com","without":"sem","work":"trabalho, trabalhar","worked":"trabalhou","working":"trabalhando",
+  "works":"trabalha, funciona","would":"(auxiliar condicional) iria, faria","wouldn't":"não iria, faria",
+  "years":"anos","yesterday":"ontem",
+};
+
+/// Content words (verb/noun/adjective-ish) inside an expression are what we
+/// link a tap to its rich chunk card; short function words ("a", "the",
+/// "to", "of"...) are excluded so they don't get misleadingly claimed by
+/// whichever chunk happens to contain them first.
+const STOPWORDS = new Set(["a","an","the","to","of","in","on","at","for","your","you","her","his","it","and","or","but","is","are","be"]);
+function buildChunkWordMap(weeklyText){
+  const map = {};
+  weeklyText.chunks.forEach(chunk => {
+    const cleaned = chunk.expression.replace(/\([^)]*\)/g, ' ');
+    (cleaned.match(/[A-Za-zÀ-ÿ']+/g) || []).forEach(w => {
+      const lw = w.toLowerCase();
+      if (!STOPWORDS.has(lw) && !(lw in map)) map[lw] = chunk;
+    });
+  });
+  return map;
+}
+
+// Renders body text with every word wrapped in a tappable span (word-lookup
+// popover), preserving all original spacing/punctuation exactly.
+function renderTappableText(body){
+  const re = /[A-Za-zÀ-ÿ']+/g;
+  let out = '';
+  let last = 0;
+  let m;
+  while ((m = re.exec(body))) {
+    out += esc(body.slice(last, m.index));
+    const word = m[0];
+    out += `<span class="tap-word" data-w="${esc(word.toLowerCase())}">${esc(word)}</span>`;
+    last = m.index + word.length;
+  }
+  out += esc(body.slice(last));
+  return out;
+}
+
 function sentencesOf(text){
   return text.replace(/\n/g," ").split(/[.!?]/).map(s=>s.trim()).filter(Boolean);
 }
@@ -726,6 +893,8 @@ const V = { tab:'home', pushedDay:null, modal:null, reviewCardsSession:null, rev
 
 const root = document.getElementById('app');
 function render(){
+  hideWordPopover();
+  stopFullText();
   if(!S.hasOnboarded){ root.innerHTML = viewOnboarding(); bindOnboarding(); return; }
   root.innerHTML = viewShell();
   bindShell();
@@ -808,6 +977,84 @@ function bindShell(){
     content.innerHTML = viewReview();
     bindReview();
   }
+  bindTapWords(content);
+}
+
+/* ============================== WORD-TAP POPOVER ============================== */
+function bindTapWords(container){
+  container.querySelectorAll('.tap-word').forEach(span => {
+    span.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showWordPopover(span.dataset.w);
+    });
+  });
+}
+function showWordPopover(word){
+  hideWordPopover();
+  const weeklyText = S.currentWeek && S.currentWeek.weeklyText;
+  const chunkMap = weeklyText ? buildChunkWordMap(weeklyText) : {};
+  const chunk = chunkMap[word];
+  const shell = document.getElementById('app-shell');
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'word-pop-backdrop';
+  backdrop.addEventListener('click', hideWordPopover);
+
+  const pop = document.createElement('div');
+  pop.className = 'word-pop';
+  pop.innerHTML = chunk ? `
+    <div class="eyebrow">Chunk da semana</div>
+    <div class="headword"><b>${esc(chunk.expression)}</b><button class="speak-word" data-action="speak-word" data-w="${esc(chunk.expression)}">${icon('headphones')}</button></div>
+    <div class="gloss">${esc(chunk.meaning)}</div>
+    <div class="extra">"${esc(chunk.example)}"</div>
+  ` : `
+    <div class="eyebrow plain">Palavra</div>
+    <div class="headword"><b>${esc(word)}</b><button class="speak-word" data-action="speak-word" data-w="${esc(word)}">${icon('headphones')}</button></div>
+    <div class="gloss">${esc(WORD_DICTIONARY[word] || 'Tradução não disponível offline ainda.')}</div>
+  `;
+
+  shell.appendChild(backdrop);
+  shell.appendChild(pop);
+  pop.querySelector('[data-action="speak-word"]').addEventListener('click', (e) => {
+    e.stopPropagation();
+    speakText(e.currentTarget.dataset.w);
+  });
+}
+function hideWordPopover(){
+  document.querySelectorAll('.word-pop, .word-pop-backdrop').forEach(el => el.remove());
+}
+function speakText(text, rate){
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'en-US';
+  u.rate = rate || 0.9;
+  speechSynthesis.speak(u);
+}
+
+/* Plays every sentence of a text back-to-back (vs. Wednesday's one-at-a-time
+   shadowing practice) — a plain "listen to the whole thing" control. */
+let fullPlaybackActive = false;
+function playFullText(sentences, onStateChange, onError){
+  stopFullText();
+  if (!('speechSynthesis' in window)) { onError && onError(); return; }
+  fullPlaybackActive = true;
+  let i = 0;
+  function next(){
+    if (!fullPlaybackActive || i >= sentences.length) { fullPlaybackActive = false; onStateChange(false); return; }
+    const u = new SpeechSynthesisUtterance(sentences[i] + '.');
+    u.lang = 'en-US';
+    u.rate = 0.92;
+    u.onend = () => { i += 1; next(); };
+    u.onerror = () => { fullPlaybackActive = false; onStateChange(false); onError && onError(); };
+    speechSynthesis.speak(u);
+  }
+  onStateChange(true);
+  next();
+}
+function stopFullText(){
+  fullPlaybackActive = false;
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
 }
 
 /* ============================== HOME TAB ============================== */
@@ -928,8 +1175,12 @@ function viewMonday(text){
   return `<div class="pad">
     ${dayHeaderHtml('monday')}
     <div class="card outline">
+      <div class="listen-row" style="margin-bottom:10px;">
+        <button class="listen-btn" data-action="toggle-listen-full">${icon('headphones')}<span id="listen-full-label">Ouvir o texto</span></button>
+        <span class="hint" style="flex:1;">Toque em qualquer palavra para ver o significado.</span>
+      </div>
       <h2 style="font-size:17px;margin-bottom:8px;">${esc(text.title)}</h2>
-      <div class="body-text">${esc(text.body)}</div>
+      <div class="body-text">${renderTappableText(text.body)}</div>
     </div>
     <div class="section-label">Perguntas de interpretação</div>
     <div style="display:flex;flex-direction:column;gap:8px;">
@@ -975,6 +1226,27 @@ function bindMonday(){
     root.querySelector(`[data-chunk-check="${i}"]`).classList.toggle('on');
     refreshBtn();
   }));
+
+  const listenBtn = document.querySelector('[data-action="toggle-listen-full"]');
+  listenBtn.addEventListener('click', () => {
+    if (fullPlaybackActive) {
+      stopFullText();
+      listenBtn.classList.remove('active');
+      document.getElementById('listen-full-label').textContent = 'Ouvir o texto';
+    } else {
+      const sentences = sentencesOf(S.currentWeek.weeklyText.body);
+      playFullText(sentences, (playing) => {
+        const btn = document.querySelector('[data-action="toggle-listen-full"]');
+        const label = document.getElementById('listen-full-label');
+        if (!btn || !label) return;
+        btn.classList.toggle('active', playing);
+        label.textContent = playing ? 'Parar' : 'Ouvir o texto';
+      }, () => {
+        const label = document.getElementById('listen-full-label');
+        if (label) label.textContent = 'Áudio indisponível neste navegador';
+      });
+    }
+  });
 }
 
 /* ---- Tuesday ---- */
@@ -1097,7 +1369,7 @@ function viewThursday(text){
     <p class="hint">Veja os pontos gramaticais escondidos no texto da semana, com explicação simples e exemplo real.</p>
     <div class="card outline" id="reread-box" style="cursor:pointer;">
       <div style="display:flex;justify-content:space-between;align-items:center;"><b style="font-size:13.5px;">Reler o texto</b><span id="reread-chev">${icon('chevronRight')}</span></div>
-      <div class="body-text" id="reread-body" style="display:none;margin-top:8px;">${esc(text.body)}</div>
+      <div class="body-text" id="reread-body" style="display:none;margin-top:8px;">${renderTappableText(text.body)}</div>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;">
       ${text.grammar.map((g,i)=>`
@@ -1251,7 +1523,7 @@ function viewSunday(text){
     <textarea id="recall-input" placeholder="Escreva de memória…">${esc(S.currentWeek.sundayRecall||'')}</textarea>
     <div class="card outline" id="compare-box" style="cursor:pointer;">
       <div style="display:flex;justify-content:space-between;align-items:center;"><b style="font-size:13.5px;">Comparar com o texto original</b><span id="compare-chev">${icon('chevronRight')}</span></div>
-      <div class="body-text" id="compare-body" style="display:none;margin-top:8px;">${esc(text.body)}</div>
+      <div class="body-text" id="compare-body" style="display:none;margin-top:8px;">${renderTappableText(text.body)}</div>
     </div>
     <div class="card outline">
       <b style="font-size:13.5px;">Antes de concluir, tente lembrar:</b>
