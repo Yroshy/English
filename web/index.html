@@ -279,6 +279,17 @@
   }
   .listen-btn.active{ background:var(--accent); color:#fff; }
   .listen-btn .icon{ width:14px; height:14px; }
+  /* Playback speed picker: a global preference (see S.speechRate), applied
+     as a multiplier on every voice in the app, so it's exposed once here on
+     the reading screen rather than duplicated per screen. */
+  .speed-row{ display:flex; align-items:center; gap:8px; }
+  .speed-label{ font-size:11.5px; font-weight:700; color:var(--ink-muted); flex-shrink:0; }
+  .speed-pills{ display:flex; gap:5px; }
+  .speed-pill{
+    background:var(--surface-2); color:var(--ink-muted); border:none; border-radius:999px;
+    padding:5px 10px; font-size:11.5px; font-weight:800; cursor:pointer; flex-shrink:0;
+  }
+  .speed-pill.active{ background:var(--primary); color:var(--on-primary); }
   /* position:fixed (viewport-relative, not shell-relative): the shell's
      height now grows with its content, so an absolutely-positioned overlay
      would be sized/placed against that (possibly much taller, scrolled-away)
@@ -1011,11 +1022,17 @@ function scheduleCard(card, grade){
 /* ============================== STATE ============================== */
 const STORAGE_KEY = 'onetext_progress_v1';
 const DAILY_GOAL_SECONDS = 20 * 60; // 20-minute daily listening goal
+const SPEECH_RATES = [
+  {value:0.7, label:'0.7x'},
+  {value:0.85, label:'0.85x'},
+  {value:1, label:'1x'},
+  {value:1.2, label:'1.2x'},
+];
 function defaultState(){
   return {
     level:null, baseLevel:null, hasOnboarded:false, xpTotal:0, currentStreak:0, longestStreak:0,
     lastActiveDate:null, currentWeek:null, completedWeeks:[], reviewCards:[], apiKey:null,
-    totalListenSeconds:0, dailyStats:null,
+    totalListenSeconds:0, dailyStats:null, speechRate:1,
   };
 }
 let S = loadState();
@@ -1349,11 +1366,16 @@ function pickEnglishVoice(){
   const english = cachedVoices.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
   return us[0] || english[0] || null;
 }
+// `rate` is each call site's own baseline (full-text playback reads a bit
+// slower than a single tapped word, for example); S.speechRate is the
+// learner's own global speed preference (see the picker on Monday's reading
+// screen), applied as a multiplier on top so it affects every voice in the
+// app consistently, not just one screen.
 function applyVoice(utterance, rate){
   const voice = pickEnglishVoice();
   if (voice) utterance.voice = voice;
   utterance.lang = 'en-US';
-  utterance.rate = rate;
+  utterance.rate = rate * (S.speechRate || 1);
 }
 function speakText(text, rate){
   if (!('speechSynthesis' in window)) return;
@@ -1571,6 +1593,12 @@ function viewMonday(text){
       <div class="listen-row" style="margin-bottom:10px;">
         <button class="listen-btn" data-action="toggle-listen-full">${icon('headphones')}<span id="listen-full-label">Ouvir o texto</span></button>
         <span class="hint" id="listen-count-label">${listenCountHint(S.currentWeek.listenCount)}</span>
+        <div class="speed-row">
+          <span class="speed-label">Velocidade</span>
+          <div class="speed-pills">
+            ${SPEECH_RATES.map(r=>`<button class="speed-pill ${S.speechRate===r.value?'active':''}" data-action="set-speech-rate" data-rate="${r.value}">${r.label}</button>`).join('')}
+          </div>
+        </div>
       </div>
       <h2 style="font-size:17px;margin-bottom:8px;">${esc(text.title)}</h2>
       <div class="body-text">${renderTappableText(text.body, text.chunks)}</div>
@@ -1608,6 +1636,14 @@ function bindMonday(){
   root.querySelectorAll('[data-action="reveal-answer"]').forEach(btn=>btn.addEventListener('click', ()=>{
     const el = root.querySelector(`[data-hidden-answer="${btn.dataset.i}"]`);
     el.style.display='block'; btn.style.display='none';
+  }));
+  root.querySelectorAll('[data-action="set-speech-rate"]').forEach(btn=>btn.addEventListener('click', ()=>{
+    S.speechRate = parseFloat(btn.dataset.rate);
+    save();
+    // Takes effect from the next utterance onward (mid-sentence audio isn't
+    // restarted) — playFullText builds a fresh SpeechSynthesisUtterance per
+    // sentence and reads S.speechRate again each time, so this is enough.
+    root.querySelectorAll('[data-action="set-speech-rate"]').forEach(b=>b.classList.toggle('active', parseFloat(b.dataset.rate)===S.speechRate));
   }));
   const done = S.currentWeek.completedDays.includes('monday');
   const set = V.dayState.reviewedChunks;
