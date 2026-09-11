@@ -8,6 +8,11 @@ gramática, escrita, fala e revisão — sem sobrecarregar os estudos.
 Por cima da metodologia, o app tem uma camada de gamificação estilo
 Duolingo: missão diária, sequência (streak) e XP.
 
+## Duas versões
+
+- **`OneText/`** — app nativo iOS em SwiftUI (veja "Como testar o app" abaixo). Exige um Mac com Xcode para compilar.
+- **`web/index.html`** — a mesma metodologia como um app web mobile-first (HTML/CSS/JS puro, sem build), pensado para testar direto no iPhone (Safari) ou no navegador do Windows, sem precisar de Mac nem Xcode. Progresso, XP, streak e cartões de revisão ficam salvos no `localStorage` do navegador (por aparelho — não sincroniza entre iPhone e Windows). A geração de texto por IA só funciona quando o arquivo está hospedado fora da pré-visualização de artifacts do Claude (ex.: GitHub Pages, Vercel); offline, os 6 textos já incluídos cobrem A1–C2 normalmente.
+
 O foco inicial, conforme pedido, é gerar **textos curtos de rotina do dia a
 dia** (manhã, trajeto para o trabalho, dia de trabalho, compras, cozinhar,
 fim de semana, academia etc.), calibrados para os 6 níveis do CEFR
