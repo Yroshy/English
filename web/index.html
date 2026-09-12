@@ -1105,7 +1105,7 @@ function defaultState(){
   return {
     level:null, baseLevel:null, hasOnboarded:false, xpTotal:0, currentStreak:0, longestStreak:0,
     lastActiveDate:null, currentWeek:null, completedWeeks:[], reviewCards:[], apiKey:null,
-    totalListenSeconds:0, dailyStats:null, speechRate:1, autoRepeatListening:false,
+    totalListenSeconds:0, dailyStats:null, speechRate:1, autoRepeatListening:false, preferredVoiceName:null,
     // Plano 2 ("5 Pilares", Vânia Sausen): a separate, non-weekly study mode
     // the learner can switch to from Home (see S.studyPlan). pillarStats is
     // today's per-pillar completion (like dailyStats, resets daily);
@@ -1447,10 +1447,29 @@ function refreshVoices(){
 }
 if ('speechSynthesis' in window) {
   refreshVoices();
-  speechSynthesis.onvoiceschanged = refreshVoices;
+  // Also re-render while Ajustes is open, since the voice list often only
+  // populates asynchronously — if it was opened before that fired, it would
+  // otherwise keep showing an empty/stale list until closed and reopened.
+  speechSynthesis.onvoiceschanged = () => { refreshVoices(); if (V.modal === 'settings') render(); };
+}
+// Every English voice the browser actually reports — surfaced in Ajustes so
+// the learner can see and pick one directly. This exists because automatic
+// picking keeps hitting device-specific dead ends we can't see or predict
+// from here: iOS Safari, for one, doesn't reliably expose the higher-quality
+// "Enhanced"/"Premium" system voices to speechSynthesis even after they're
+// downloaded in Settings — so no name-based heuristic here can promise a
+// better voice actually exists to pick. Letting the learner see the exact
+// list and test each one directly is more reliable than another guess.
+function englishVoiceList(){
+  refreshVoices();
+  return cachedVoices.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
 }
 function pickEnglishVoice(){
   if (!cachedVoices.length) refreshVoices();
+  if (S.preferredVoiceName){
+    const chosen = cachedVoices.find(v => v.name === S.preferredVoiceName);
+    if (chosen) return chosen;
+  }
   // No general gender preference — matching on "male" previously picked up
   // low-quality novelty voices (e.g. iOS's "Fred") that were worse than no
   // preference at all. "Andrew" is a specific, named ask (Microsoft's
@@ -2632,6 +2651,25 @@ function viewSettings(){
         <p class="hint">Ativa geração de textos por IA, mais collocations e correção de escrita. Fica salva só neste navegador (localStorage) — não é tão seguro quanto o Keychain do app nativo, use uma chave pessoal de teste.</p>
         <p class="warn-text">Nota: dentro da pré-visualização do Claude, chamadas de rede a serviços externos são bloqueadas por segurança — a IA só funciona quando esta página está hospedada fora daqui (ex.: GitHub Pages, Vercel). Offline, o app funciona 100% com os textos já incluídos.</p>
       </div>
+      <div class="section-label" style="padding:0 18px;">Voz de leitura</div>
+      <div style="padding:10px 18px;display:flex;flex-direction:column;gap:8px;">
+        <p class="hint">O navegador às vezes não deixa a voz "Aprimorada" do sistema disponível para sites, mesmo depois de baixada — escolha aqui, direto na lista que o seu navegador realmente enxerga, e teste antes de decidir.</p>
+        <button class="chunk-row" data-action="pick-voice" data-voice="" style="width:100%;text-align:left;border:none;cursor:pointer;">
+          <span style="flex:1;"><div class="chunk-expr">Automático (recomendado)</div></span>
+          ${!S.preferredVoiceName?icon('check'):''}
+        </button>
+        ${englishVoiceList().map(v=>`
+          <div class="chunk-row">
+            <button class="chunk-toggle-area" data-action="pick-voice" data-voice="${esc(v.name)}">
+              <span>
+                <div class="chunk-expr">${esc(v.name)}</div>
+                <div class="chunk-mean">${esc(v.lang)}</div>
+              </span>
+            </button>
+            ${S.preferredVoiceName===v.name?icon('check'):''}
+            <button class="speak-word" data-action="test-voice" data-voice="${esc(v.name)}">${icon('headphones')}</button>
+          </div>`).join('') || `<p class="hint">Nenhuma voz em inglês encontrada ainda — feche e abra os Ajustes de novo em alguns segundos, o navegador às vezes demora pra carregar a lista.</p>`}
+      </div>
       <div class="settings-row"><span>Sequência atual</span><span class="v">${S.currentStreak} dia${S.currentStreak===1?'':'s'}</span></div>
       <div class="settings-row"><span>Maior sequência</span><span class="v">${S.longestStreak} dia${S.longestStreak===1?'':'s'}</span></div>
       <div class="settings-row"><span>XP total</span><span class="v">${S.xpTotal}</span></div>
@@ -2649,6 +2687,22 @@ function bindSettings(){
     const b = document.querySelector('[data-action="save-key"]');
     b.textContent = 'Salvo!'; setTimeout(()=>b.textContent='Salvar chave', 1200);
   });
+  document.querySelectorAll('[data-action="pick-voice"]').forEach(b=>b.addEventListener('click', ()=>{
+    S.preferredVoiceName = b.dataset.voice || null;
+    save();
+    render(); // re-renders with V.modal still 'settings', so it reopens with the new checkmark
+  }));
+  document.querySelectorAll('[data-action="test-voice"]').forEach(b=>b.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if (!('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    const voice = cachedVoices.find(v => v.name === e.currentTarget.dataset.voice);
+    const u = new SpeechSynthesisUtterance('This is a test of this voice.');
+    if (voice) u.voice = voice;
+    u.lang = 'en-US';
+    u.rate = 1 * (S.speechRate || 1);
+    speechSynthesis.speak(u);
+  }));
 }
 function viewLevelChange(){
   return `<div class="overlay">
