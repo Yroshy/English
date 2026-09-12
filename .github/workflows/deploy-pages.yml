@@ -1,0 +1,40 @@
+name: Deploy web app to GitHub Pages
+
+# Publishes web/index.html to GitHub Pages on every push to this branch, so
+# the app always runs as a normal hosted page (real, persistent browser
+# storage; AI text generation works too) instead of only through Claude's
+# Artifact preview, whose sandboxed storage can reset between sessions.
+#
+# One-time setup (a human must do this once in the GitHub UI — it can't be
+# done from a workflow file): repo Settings -> Pages -> under "Build and
+# deployment", set Source to "GitHub Actions". After that, this workflow
+# runs automatically on every push and the app is live at the Pages URL
+# shown on that same Settings page.
+on:
+  push:
+    branches:
+      - claude/ios-english-learning-app-b3r39g
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - id: deployment
+        uses: actions/deploy-pages@v4
