@@ -1105,7 +1105,7 @@ function defaultState(){
   return {
     level:null, baseLevel:null, hasOnboarded:false, xpTotal:0, currentStreak:0, longestStreak:0,
     lastActiveDate:null, currentWeek:null, completedWeeks:[], reviewCards:[], apiKey:null,
-    totalListenSeconds:0, dailyStats:null, speechRate:1, autoRepeatListening:false, preferredVoiceName:null,
+    totalListenSeconds:0, dailyStats:null, speechRate:1, autoRepeatListening:false, preferredVoiceURI:null,
     // Plano 2 ("5 Pilares", Vânia Sausen): a separate, non-weekly study mode
     // the learner can switch to from Home (see S.studyPlan). pillarStats is
     // today's per-pillar completion (like dailyStats, resets daily);
@@ -1464,10 +1464,31 @@ function englishVoiceList(){
   refreshVoices();
   return cachedVoices.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
 }
+// For display in Ajustes: same-named voices (compact vs Enhanced on iOS,
+// see pickEnglishVoice) get a "(2)", "(3)" suffix so they're at least
+// visually distinguishable, since their .name alone can't tell them apart.
+function voiceListForSettings(){
+  const voices = englishVoiceList();
+  const totalByName = {};
+  voices.forEach(v => { totalByName[v.name] = (totalByName[v.name]||0) + 1; });
+  const seenByName = {};
+  return voices.map(v => {
+    seenByName[v.name] = (seenByName[v.name]||0) + 1;
+    const label = totalByName[v.name] > 1 ? `${v.name} (${seenByName[v.name]})` : v.name;
+    return { voice: v, label };
+  });
+}
 function pickEnglishVoice(){
   if (!cachedVoices.length) refreshVoices();
-  if (S.preferredVoiceName){
-    const chosen = cachedVoices.find(v => v.name === S.preferredVoiceName);
+  if (S.preferredVoiceURI){
+    // Keyed by voiceURI, not name: iOS Safari in particular exposes its
+    // compact and Enhanced/Premium system voices as separate entries that
+    // share the exact same visible .name (e.g. two "Samantha" entries) —
+    // .voiceURI is what actually tells them apart there. Matching by name
+    // would silently resolve to whichever same-named entry happens to come
+    // first, so picking "the other Samantha" in Ajustes would have no
+    // audible effect at all.
+    const chosen = cachedVoices.find(v => v.voiceURI === S.preferredVoiceURI);
     if (chosen) return chosen;
   }
   // No general gender preference — matching on "male" previously picked up
@@ -2654,20 +2675,20 @@ function viewSettings(){
       <div class="section-label" style="padding:0 18px;">Voz de leitura</div>
       <div style="padding:10px 18px;display:flex;flex-direction:column;gap:8px;">
         <p class="hint">O navegador às vezes não deixa a voz "Aprimorada" do sistema disponível para sites, mesmo depois de baixada — escolha aqui, direto na lista que o seu navegador realmente enxerga, e teste antes de decidir.</p>
-        <button class="chunk-row" data-action="pick-voice" data-voice="" style="width:100%;text-align:left;border:none;cursor:pointer;">
+        <button class="chunk-row" data-action="pick-voice" data-voice-uri="" style="width:100%;text-align:left;border:none;cursor:pointer;">
           <span style="flex:1;"><div class="chunk-expr">Automático (recomendado)</div></span>
-          ${!S.preferredVoiceName?icon('check'):''}
+          ${!S.preferredVoiceURI?icon('check'):''}
         </button>
-        ${englishVoiceList().map(v=>`
+        ${voiceListForSettings().map(({voice,label})=>`
           <div class="chunk-row">
-            <button class="chunk-toggle-area" data-action="pick-voice" data-voice="${esc(v.name)}">
+            <button class="chunk-toggle-area" data-action="pick-voice" data-voice-uri="${esc(voice.voiceURI)}">
               <span>
-                <div class="chunk-expr">${esc(v.name)}</div>
-                <div class="chunk-mean">${esc(v.lang)}</div>
+                <div class="chunk-expr">${esc(label)}</div>
+                <div class="chunk-mean">${esc(voice.lang)}</div>
               </span>
             </button>
-            ${S.preferredVoiceName===v.name?icon('check'):''}
-            <button class="speak-word" data-action="test-voice" data-voice="${esc(v.name)}">${icon('headphones')}</button>
+            ${S.preferredVoiceURI===voice.voiceURI?icon('check'):''}
+            <button class="speak-word" data-action="test-voice" data-voice-uri="${esc(voice.voiceURI)}">${icon('headphones')}</button>
           </div>`).join('') || `<p class="hint">Nenhuma voz em inglês encontrada ainda — feche e abra os Ajustes de novo em alguns segundos, o navegador às vezes demora pra carregar a lista.</p>`}
       </div>
       <div class="settings-row"><span>Sequência atual</span><span class="v">${S.currentStreak} dia${S.currentStreak===1?'':'s'}</span></div>
@@ -2688,7 +2709,7 @@ function bindSettings(){
     b.textContent = 'Salvo!'; setTimeout(()=>b.textContent='Salvar chave', 1200);
   });
   document.querySelectorAll('[data-action="pick-voice"]').forEach(b=>b.addEventListener('click', ()=>{
-    S.preferredVoiceName = b.dataset.voice || null;
+    S.preferredVoiceURI = b.dataset.voiceUri || null;
     save();
     render(); // re-renders with V.modal still 'settings', so it reopens with the new checkmark
   }));
@@ -2696,7 +2717,7 @@ function bindSettings(){
     e.stopPropagation();
     if (!('speechSynthesis' in window)) return;
     speechSynthesis.cancel();
-    const voice = cachedVoices.find(v => v.name === e.currentTarget.dataset.voice);
+    const voice = cachedVoices.find(v => v.voiceURI === e.currentTarget.dataset.voiceUri);
     const u = new SpeechSynthesisUtterance('This is a test of this voice.');
     if (voice) u.voice = voice;
     u.lang = 'en-US';
