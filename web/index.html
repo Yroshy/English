@@ -1105,7 +1105,7 @@ function defaultState(){
   return {
     level:null, baseLevel:null, hasOnboarded:false, xpTotal:0, currentStreak:0, longestStreak:0,
     lastActiveDate:null, currentWeek:null, completedWeeks:[], reviewCards:[], apiKey:null,
-    totalListenSeconds:0, dailyStats:null, speechRate:1,
+    totalListenSeconds:0, dailyStats:null, speechRate:1, autoRepeatListening:false,
     // Plano 2 ("5 Pilares", Vânia Sausen): a separate, non-weekly study mode
     // the learner can switch to from Home (see S.studyPlan). pillarStats is
     // today's per-pillar completion (like dailyStats, resets daily);
@@ -1451,15 +1451,19 @@ if ('speechSynthesis' in window) {
 }
 function pickEnglishVoice(){
   if (!cachedVoices.length) refreshVoices();
-  // No gender preference — the male-voice match was landing on low-quality
-  // novelty voices (e.g. iOS's "Fred", robotic and hard to understand) on
-  // some devices, which is worse than the accent/gender trade-off it was
-  // meant to fix. Just prefer American English (this app teaches US
-  // English) and otherwise take whatever the OS considers its default
-  // English voice — normally a clear, natural-sounding one.
+  // No general gender preference — matching on "male" previously picked up
+  // low-quality novelty voices (e.g. iOS's "Fred") that were worse than no
+  // preference at all. "Andrew" is a specific, named ask (Microsoft's
+  // natural-sounding neural voice, e.g. "Microsoft Andrew Online (Natural) -
+  // English (United States)" on Edge/Windows) rather than a generic
+  // keyword, so it doesn't have that false-positive-match risk: use it
+  // whenever it's actually present, and fall back to the previous
+  // accent-only preference (American English, else whatever the OS
+  // considers its default English voice) everywhere it isn't.
   const us = cachedVoices.filter(v => v.lang && v.lang.toLowerCase() === 'en-us');
   const english = cachedVoices.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
-  return us[0] || english[0] || null;
+  const andrew = english.find(v => /andrew/i.test(v.name));
+  return andrew || us[0] || english[0] || null;
 }
 // `rate` is each call site's own baseline (full-text playback reads a bit
 // slower than a single tapped word, for example); S.speechRate is the
@@ -1484,13 +1488,19 @@ function speakText(text, rate){
 /* Plays every sentence of a text back-to-back (vs. Wednesday's one-at-a-time
    shadowing practice) — a plain "listen to the whole thing" control. */
 let fullPlaybackActive = false;
-function playFullText(sentences, onStateChange, onError, onSentenceChange, onWordBoundary){
+function playFullText(sentences, onStateChange, onError, onSentenceChange, onWordBoundary, onFinished){
   stopFullText();
   if (!('speechSynthesis' in window)) { onError && onError(); return; }
   fullPlaybackActive = true;
   let i = 0;
   function next(){
-    if (!fullPlaybackActive || i >= sentences.length) { fullPlaybackActive = false; onStateChange(false); onSentenceChange && onSentenceChange(-1); onWordBoundary && onWordBoundary(-1, -1); return; }
+    // Distinguish "reached the end on its own" from "got stopped partway
+    // through" (stopFullText already flipped fullPlaybackActive to false) —
+    // only the former should trigger auto-repeat via onFinished, or a
+    // manual "Parar" tap while auto-repeat is on would immediately restart
+    // playback instead of actually stopping it.
+    if (!fullPlaybackActive) { onStateChange(false); onSentenceChange && onSentenceChange(-1); onWordBoundary && onWordBoundary(-1, -1); return; }
+    if (i >= sentences.length) { fullPlaybackActive = false; onStateChange(false); onSentenceChange && onSentenceChange(-1); onWordBoundary && onWordBoundary(-1, -1); onFinished && onFinished(); return; }
     onSentenceChange && onSentenceChange(i);
     const sentText = sentences[i] + '.';
     const u = new SpeechSynthesisUtterance(sentText);
@@ -1710,6 +1720,10 @@ function viewMonday(text){
             ${SPEECH_RATES.map(r=>`<button class="speed-pill ${S.speechRate===r.value?'active':''}" data-action="set-speech-rate" data-rate="${r.value}">${r.label}</button>`).join('')}
           </div>
         </div>
+        <div class="toggle-row" style="width:100%;">
+          <span style="font-weight:700;font-size:12.5px;">🔁 Repetir automaticamente</span>
+          <button class="switch ${S.autoRepeatListening?'on':''}" data-action="toggle-auto-repeat"></button>
+        </div>
       </div>
       <h2 style="font-size:17px;margin-bottom:8px;">${esc(text.title)}</h2>
       <div class="body-text">${renderTappableText(text.body, text.chunks)}</div>
@@ -1778,6 +1792,46 @@ function bindMonday(){
   function clearSentenceHighlight(){
     document.querySelectorAll('.read-word.reading-active').forEach(el => el.classList.remove('reading-active'));
   }
+  function startListening(){
+    S.currentWeek.listenCount = (S.currentWeek.listenCount || 0) + 1;
+    save();
+    const countLabel = document.getElementById('listen-count-label');
+    if (countLabel) countLabel.textContent = listenCountHint(S.currentWeek.listenCount);
+    const sentences = sentencesOf(S.currentWeek.weeklyText.body);
+    playFullText(sentences, (playing) => {
+      const btn = document.querySelector('[data-action="toggle-listen-full"]');
+      const label = document.getElementById('listen-full-label');
+      if (!btn || !label) return;
+      btn.classList.toggle('active', playing);
+      label.textContent = playing ? 'Parar' : 'Ouvir o texto';
+    }, () => {
+      const label = document.getElementById('listen-full-label');
+      if (label) label.textContent = 'Áudio indisponível neste navegador';
+      clearSentenceHighlight();
+    }, (idx) => {
+      // Sentence changed: nothing to paint here anymore (the highlight
+      // now lives on individual words, driven by onWordBoundary below) —
+      // just clear whatever word was lit from the previous sentence.
+      clearSentenceHighlight();
+    }, (sentIdx, charIndex) => {
+      clearSentenceHighlight();
+      if (sentIdx < 0) return;
+      const sentEl = document.querySelector(`.read-sentence[data-sent-idx="${sentIdx}"]`);
+      if (!sentEl) return;
+      let match = null;
+      sentEl.querySelectorAll('.read-word').forEach(w => {
+        if (parseInt(w.dataset.off, 10) <= charIndex) match = w;
+      });
+      if (match) {
+        match.classList.add('reading-active');
+        match.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    }, () => {
+      // Reached the end on its own (not stopped manually) — loop back to
+      // the start automatically when the learner has turned that on.
+      if (S.autoRepeatListening) startListening();
+    });
+  }
   listenBtn.addEventListener('click', () => {
     if (fullPlaybackActive) {
       stopFullText();
@@ -1785,41 +1839,14 @@ function bindMonday(){
       document.getElementById('listen-full-label').textContent = 'Ouvir o texto';
       clearSentenceHighlight();
     } else {
-      S.currentWeek.listenCount = (S.currentWeek.listenCount || 0) + 1;
-      save();
-      const countLabel = document.getElementById('listen-count-label');
-      if (countLabel) countLabel.textContent = listenCountHint(S.currentWeek.listenCount);
-      const sentences = sentencesOf(S.currentWeek.weeklyText.body);
-      playFullText(sentences, (playing) => {
-        const btn = document.querySelector('[data-action="toggle-listen-full"]');
-        const label = document.getElementById('listen-full-label');
-        if (!btn || !label) return;
-        btn.classList.toggle('active', playing);
-        label.textContent = playing ? 'Parar' : 'Ouvir o texto';
-      }, () => {
-        const label = document.getElementById('listen-full-label');
-        if (label) label.textContent = 'Áudio indisponível neste navegador';
-        clearSentenceHighlight();
-      }, (idx) => {
-        // Sentence changed: nothing to paint here anymore (the highlight
-        // now lives on individual words, driven by onWordBoundary below) —
-        // just clear whatever word was lit from the previous sentence.
-        clearSentenceHighlight();
-      }, (sentIdx, charIndex) => {
-        clearSentenceHighlight();
-        if (sentIdx < 0) return;
-        const sentEl = document.querySelector(`.read-sentence[data-sent-idx="${sentIdx}"]`);
-        if (!sentEl) return;
-        let match = null;
-        sentEl.querySelectorAll('.read-word').forEach(w => {
-          if (parseInt(w.dataset.off, 10) <= charIndex) match = w;
-        });
-        if (match) {
-          match.classList.add('reading-active');
-          match.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        }
-      });
+      startListening();
     }
+  });
+  const repeatToggle = document.querySelector('[data-action="toggle-auto-repeat"]');
+  if(repeatToggle) repeatToggle.addEventListener('click', () => {
+    S.autoRepeatListening = !S.autoRepeatListening;
+    save();
+    repeatToggle.classList.toggle('on', S.autoRepeatListening);
   });
 }
 
