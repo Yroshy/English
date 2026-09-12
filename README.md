@@ -11,7 +11,9 @@ Duolingo: missão diária, sequência (streak) e XP.
 ## Duas versões
 
 - **`OneText/`** — app nativo iOS em SwiftUI (veja "Como testar o app" abaixo). Exige um Mac com Xcode para compilar.
-- **`web/index.html`** — a mesma metodologia como um app web mobile-first (HTML/CSS/JS puro, sem build), pensado para testar direto no iPhone (Safari) ou no navegador do Windows, sem precisar de Mac nem Xcode. Progresso, XP, streak e cartões de revisão ficam salvos no `localStorage` do navegador (por aparelho — não sincroniza entre iPhone e Windows). A geração de texto por IA só funciona quando o arquivo está hospedado fora da pré-visualização de artifacts do Claude (ex.: GitHub Pages, Vercel); offline, os 6 textos já incluídos cobrem A1–C2 normalmente.
+- **`web/index.html`** — a mesma metodologia como um app web mobile-first (HTML/CSS/JS puro, sem build), pensado para testar direto no iPhone (Safari) ou no navegador do Windows, sem precisar de Mac nem Xcode. Progresso, XP, streak e cartões de revisão ficam salvos no `localStorage` do navegador (por aparelho — não sincroniza entre iPhone e Windows). **Importante:** teste pelo link do GitHub Pages (veja abaixo), não pela pré-visualização de artifact do Claude — essa pré-visualização roda numa janela embutida cujo armazenamento pode não persistir entre sessões, o que parece "o progresso não salva" mas é uma limitação da pré-visualização, não do app. A geração de texto por IA também só funciona fora dela.
+
+  Este repositório já publica `web/index.html` automaticamente no GitHub Pages a cada push nesta branch (`.github/workflows/deploy-pages.yml`). Só falta um passo único, feito uma vez pela interface do GitHub (não dá para automatizar): em **Settings → Pages**, em "Build and deployment", mude **Source** para **"GitHub Actions"** e salve. Depois disso a URL do Pages (mostrada nessa mesma página, algo como `https://yroshy.github.io/English/`) sempre serve a versão mais recente — e aí sim o progresso persiste normalmente, como em qualquer site.
 
 O foco inicial, conforme pedido, é gerar **textos curtos de rotina do dia a
 dia** (manhã, trajeto para o trabalho, dia de trabalho, compras, cozinhar,

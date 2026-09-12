@@ -1258,15 +1258,6 @@ async function startNewWeek(){
   S.currentWeek = { weeklyText:text, completedDays:[], writingSubmission:'', writingFeedback:null, sundayRecall:'', listenCount:0, startedAt:new Date().toISOString(), completedAt:null };
   save();
 }
-function gradeReviewCard(id, grade){
-  const card = S.reviewCards.find(c=>c.id===id);
-  if(!card) return;
-  scheduleCard(card, grade);
-  S.xpTotal += 5;
-  registerActivityToday();
-  save();
-}
-
 /* ============================== APP / ROUTER STATE ============================== */
 const V = { tab:'home', pushedDay:null, pushedPillar:null, modal:null, reviewCardsSession:null, reviewIndex:0, reviewRevealed:false };
 
@@ -2508,7 +2499,8 @@ function bindReview(){
   const btn = root.querySelector('[data-action="start-review"]');
   if(btn) btn.addEventListener('click', ()=>{
     V.reviewCardsSession = dueReviewCards(20);
-    V.reviewIndex = 0; V.reviewRevealed = false;
+    V.reviewOriginalCount = V.reviewCardsSession.length;
+    V.reviewIndex = 0; V.reviewRevealed = false; V.reviewXpEarned = 0;
     V.modal = 'review-session';
     render();
   });
@@ -2524,7 +2516,7 @@ function viewReviewSession(){
         <div class="empty-state">
           ${icon('star')}
           <h2>Revisão concluída!</h2>
-          <p>Você revisou ${cards.length} cart${cards.length===1?'ão':'ões'} e ganhou +${cards.length*5} XP.</p>
+          <p>Você revisou ${V.reviewOriginalCount} cart${V.reviewOriginalCount===1?'ão':'ões'} e ganhou +${V.reviewXpEarned||0} XP.</p>
           <button class="btn primary" data-action="close-overlay" style="margin-top:6px;">Concluir</button>
         </div>
       </div>
@@ -2570,7 +2562,28 @@ function bindReviewSession(){
   if(revealBtn) revealBtn.addEventListener('click', ()=>{ V.reviewRevealed = true; render(); });
   document.querySelectorAll('[data-action="grade"]').forEach(b=>b.addEventListener('click', ()=>{
     const cards = V.reviewCardsSession;
-    gradeReviewCard(cards[V.reviewIndex].id, b.dataset.g);
+    const idx = V.reviewIndex;
+    const card = cards[idx];
+    const grade = b.dataset.g;
+    if(grade === 'again'){
+      // Anki-style relearning: "Não lembrei" must bring the card back for
+      // another try in THIS session, not just vanish until tomorrow (which
+      // is what scheduleCard's 1-day interval alone would do, and reads as
+      // "nothing happened"). Only an eventual real pass (good/easy)
+      // reschedules it long-term and earns XP — otherwise grading "again"
+      // over and over on the same card would farm free XP.
+      card.lapses = (card.lapses||0) + 1;
+      card.repetitions = 0;
+      card.easeFactor = Math.max(1.3, card.easeFactor - 0.2);
+      save();
+      cards.splice(Math.min(cards.length, idx + 3), 0, card);
+    } else {
+      scheduleCard(card, grade);
+      S.xpTotal += 5;
+      V.reviewXpEarned = (V.reviewXpEarned||0) + 5;
+      registerActivityToday();
+      save();
+    }
     V.reviewIndex += 1; V.reviewRevealed = false;
     render();
   }));
